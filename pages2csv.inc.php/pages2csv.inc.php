@@ -213,6 +213,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   }
 
   // pages2csv の extract設定
+  $extract_arg_filter = NULL;
   if($extract_name != NULL) {
     $extract_config = new Config('plugin/pages2csv');
     
@@ -222,11 +223,13 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 		    'msg' => "<p>config file '".htmlspecialchars($extract_config->page)."' not found</p>",
 		    );
     }
+    $extract_arg_filter = new Pages2csv_extract_arg_filter($extract_name, $extract_config);
   }
+  unset($extract_config);
 
   $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,
 				      $filter_name, $filter_config,
-				      $extract_name, $extract_config);
+				      $extract_arg_filter);
   
   // 出力内容のエンコーディング処理
   if ($encode != '' ) {
@@ -286,12 +289,13 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 
 function plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order='', $limit=NULL,
 				     $filter_name=NULL,$filter_config=NULL,
-				     $extract_name=NULL, $extract_config=NULL)
+				     $extract_arg_filter=NULL)
 {
 
   $list = &new Pages2csv_Tracker_csvlist($page,$refer,$config,$list,$filter_name,
-					 $extract_name,$extract_config);
-  if($filter_name != NULL) {
+					 $extract_arg_filter);
+  if($filter_name != NULL)
+  {
     $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
     $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
   }
@@ -306,14 +310,14 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
   var $extract_arg_filter = NULL;
 
   function Pages2csv_Tracker_csvlist($page,$refer,$config,$list,$filter_name,
-				     $extract_name,$extract_config)
+				     $extract_arg_filter)
   {
     $cache = NULL;
+
+    // 親クラスのコンストラクタを呼び出して初期化
     $this->Tracker_list($page,$refer,$config,$list,$filter_name,$cache);
-    if($extract_name != NULL && $extract_config != NULL) 
-    {
-	$this->extract_arg_filter = new Pages2csv_extract_arg_filter($extract_name, $extract_config);
-    }
+
+    $this->extract_arg_filter = $extract_arg_filter;
   }
 
   function replace_item($arr)
