@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.4 2004/08/13 14:56:31 jjyun Exp $
+// $Id: pages2csv.inc.php,v 0.5 2004/08/13 15:01:22 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -123,8 +123,13 @@ function plugin_pages2csv_action()
 {
   global $vars;
   global $_attach_messages;
-  global $adminpass;
   
+  // 利用するプラグインの存在チェック
+  if ( !function_exists('pkwk_login') )
+  {
+    return array('result'=>FALSE,'msg'=>"pkwk_login function is not found (in func.php).");
+  }
+
   // $vars['refer'] : 当該のplugin を設置したページ
   // $vars['s_page']  : リスト表示するtrackerのページの格納場所
   // ページ名が NULL である場合は存在しないと想定
@@ -143,8 +148,7 @@ function plugin_pages2csv_action()
     check_readable($s_page); // 参照先のページが読み込み可能か？
   }
 
-  if (PAGES2CSV_UPLOAD_ADMIN_ONLY and
-      ($pass === NULL or md5($pass) != $adminpass ))
+  if (PAGES2CSV_UPLOAD_ADMIN_ONLY and ($pass === NULL or ! pkwk_login($pass) ))
   {
     return   array('result'=>FALSE,'msg'=>$_attach_messages['err_adminpass']);
   }
