@@ -510,27 +510,12 @@ class Pages2csv_extract_arg_Condition
 		$str_plugin = ($this->target_plugin_type == 0) ? '\#' : '\&';
 		$str_plugin .= $this->target_plugin_name;
 
-		if (preg_match_all("/(?:$str_plugin\(([^\)]*)\))/", $var, $matches, PREG_SET_ORDER))
-		{
-			$paddata = preg_split("/$str_plugin\([^\)]*\)/", $var);
-			$var = $paddata[0];
-			foreach($matches as $i => $match)
-			{
-				$str_arg = $match[1];
-				$args = array();
-				$args = explode(",",$str_arg);
-				if( $this->extract_arg_num != NULL && 
-				    $this->extract_arg_num < count($args) )
-				{
-					$extract_arg = $args[ $this->extract_arg_num ];
-				}
-				else
-				{
-					$extract_arg = $str_plugin . $str_arg;
-				}
-			}
-			$var .= $extract_arg . $paddata[$i+1];
-		}
+		$var = Tracker_field_string_Utility::get_argument_from_plugin_string(
+			$var,
+			$this->extract_arg_num,
+			$this->target_plugin_name,
+			$this->target_plugin_type);
+
 		return $var;
 	}
 
