@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 0.8 2004/08/09 14:54:22 jjyun Exp $
+// $Id: datefield.inc.php,v 0.9 2004/11/22 03:47:12 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -19,7 +19,7 @@
  */ 
 
 function plugin_datefield_action() {
-  global $vars;
+  global $script, $vars;
   global $html_transitional;
   check_editable($vars['refer'], true, true);
 
@@ -54,6 +54,10 @@ function plugin_datefield_action() {
   }
 
   page_write($vars['refer'], $pagedata); 
+  if( $pagedata != '' ) {
+    header("Location: $script?".rawurlencode($vars['refer'])."#datefield_no_".$vars['number']);
+    exit;
+  }
   return array('msg' => '', 'body' => '');
 }
 
@@ -269,6 +273,7 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
   $body .= <<<EOD
     <form name="subClndr$number" action="$script_enc"
     method='post' style="margin:0;">
+    <a id="datefield_no_$number">
     <div  style="white-space:nowrap; ">
     <input type="text" name="infield" value="$value" size="{$field_size}"
     onchange="this.form.submit();" />
@@ -279,6 +284,7 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
       <input type="hidden" name="plugin" value="datefield" />
       <input type="hidden" name="number" value="$number" />
     </div>
+    </a>
     </form>
 EOD;
   return $body;
