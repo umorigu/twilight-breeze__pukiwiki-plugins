@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: linkvote.inc.php,v 0.3 2004/09/20 00:30:24 jjyun Exp $
+// $Id: linkvote.inc.php,v 0.4 2004/12/10 02:38:42 jjyun Exp $
 /**
  *  PukiWiki - link with used counter plugin
  * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
@@ -155,7 +155,7 @@ EOD;
 		}
 		else {
 		  require_once(PLUGIN_DIR.'ref.inc.php');
-		  $ret_ref = plugin_ref_body(array($str_bunner,nolink));
+		  $ret_ref = plugin_ref_body(array($str_bunner,'nolink'));
 		  
 		  if (isset($ret_ref['_error']) && $ret_ref['_error'] != '' ) {
 		    return $_linkvote_messages['body_error'];
@@ -173,7 +173,7 @@ EOD;
 }
 function plugin_linkvote_address($match, $vote_no, $page, $ndigest)
 {
-	global $digests;
+  	static $digests = array();
 
 	$this_flag = FALSE;
 	$npage          = trim($match[1]);
@@ -424,7 +424,9 @@ function plugin_linkvote_action_block($vote_no)
 	return $retvars;
 }
 // -- linkvote.inc.php --
-// Update Logs - Modified by jjyun. (2004/02/22 - 2004/09/13)
+// Update Logs - Modified by jjyun. (2004/02/22 - 2004/12/10)
+//  v0.4 2004/12/10 modified by jjyun.
+//    内部コードの修正(変更箇所 plugin_linkvote_inline(), plugin_linkvote_address() )
 //  v0.3 2004/09/05 modified by jjyun.
 //    リンク先の表記として画像ファイルを指定できるようにする
 //  v0.2 2004/08/13 modified by jjyun.
