@@ -4,8 +4,8 @@
 //
 // $Id: tracker.inc.php,v 1.26 2004/12/02 11:34:25 henoheno Exp $
 //
-// This script is modified by jjyun. (2004/02/22 - 2004/10/31) 
-//   tracker.inc.php-modified, v 1.1 2004/10/31 16:37:56 jjyun
+// This script is modified by jjyun. (2004/02/22 - 2005/01/02) 
+//   tracker.inc.php-modified, v 1.2 2005/01/02 16:37:56 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 // UpdateLog : スクリプトの最後に移動しました。
@@ -81,14 +81,6 @@ function plugin_tracker_convert()
 	foreach (array_keys($fields) as $name)
 	{
 	        if (is_a($fields[$name],'Tracker_field_datefield')) {
-			// 適切なバージョンのスクリプトの存在を確認する
-			if (!exist_plugin('datefield')
-			    or !function_exists('plugin_datefield_getDateStrWithFormat')
-			    or !function_exists('plugin_datefield_formFormat')
-			    or !function_exists('plugin_datefield_headDeclaration') )
-			{
-				return '<p>datefield.inc.php not found or not correct version.</p>';
-			}
 			$isDatefield = TRUE;
 		}
 
@@ -103,8 +95,7 @@ function plugin_tracker_convert()
 
 	if($isDatefield == TRUE)
 	{
-		require_once(PLUGIN_DIR.'datefield.inc.php');
-		plugin_datefield_headDeclaration();
+		Tracker_field_datefield::set_head_declaration();
 		$number = plugin_tracker_getNumber();
 		$form_scp = '<script type="text/javascript" src="' . SKIN_DIR . 'datefield.js"></script>';
 		$form_scp .= <<<FORMSTR
@@ -1120,7 +1111,9 @@ class Tracker_list
 				$column_name = $column_names[$key];
 				if( isset($this->fields[$column_name]) )
 				{
-					$row[$column_name] = addslashes($value);
+	  //					$row[$column_name] = addslashes($value);
+					$row[$column_name] = stripslashes($value);
+				  
 				}
 			}
 
@@ -1196,7 +1189,8 @@ class Tracker_list
 			$arr = array();
 			foreach ( $column_names as $key)
 			{
-				$arr[$key] = $row[$key];
+	 //			$arr[$key] = $row[$key];
+	 			$arr[$key] = addslashes($row[$key]);
 			}
 	//	fputs($fp, csv_implode('","', $arr)."\n");
 		fputs($fp, "\"" . implode('","', $arr) . "\"\n");
@@ -1542,17 +1536,17 @@ class Tracker_field_datefield extends Tracker_field
 		$s_value = htmlspecialchars($this->default_value);
 		
 		$s_year  = date("Y",time());
-		$s_month = date("n",time()); // ここでは先頭に0を付けない
-		$s_date  = date("j",time()); // ここでは先頭に0を付けない
+		$s_month = date("m",time()); 
+		$s_date  = date("d",time()); 
 		
 		require_once( PLUGIN_DIR . 'datefield.inc.php');
 		// デフォルト値を現在の日付にする
 		if($s_value=="NOW")
 		{
-		  $s_value = plugin_datefield_getDateStrWithFormat($s_format, $s_year, $s_month-1, $s_date);
+		  $s_value = Tracker_field_datefield::get_datestr_with_format($s_format, $s_year, $s_month-1, $s_date);
 		}
 		// Javascriptに引きわたす形式のフォーマット文字列に変更する
-		$s_format = plugin_datefield_formFormat($s_format);
+		$s_format = Tracker_field_datefield::form_format($s_format);
 		
 		return <<<EOD
 <input type="text" name="$s_name" size="$s_size" value="$s_value" />
@@ -1579,17 +1573,53 @@ EOD;
 	{
 		$s_format = (array_key_exists(1,$this->values)) ? htmlspecialchars($this->values[1]) : 'YYYY-MM-DD';
 		$s_unmdfy = (array_key_exists(2,$this->values)) ? htmlspecialchars($this->values[2]) : 'FALSE';
-    
-		if($s_unmdfy != 'TRUE')
+    		if($s_unmdfy != 'TRUE')
 		{
 		  $value = "#datefield($value,$s_format)";
 		}
 		return parent::format_value($value);
 	}
+
+	function form_format($format_opt) {
+		$format_str= trim($format_opt);
+		if(strlen($format_str) == 0 )  $format_str = 'YYYY/MM/DD';
+		if(preg_match('/^[\'\"].*[\"\']$/',$format_str)) /* " */
+		{ 
+			$format_str = '\'' . substr($format_str,1,strlen($format_str)-2) . '\'';
+		}
+		else
+		{
+			$format_str = '\'' . $format_str . '\'';
+		}
+		return $format_str;
+	}
+
+	// 月日の値は既に2桁の値として渡すこと
+	function get_datestr_with_format($format_opt,$yyyy,$mm,$dd ){
+		$strWithFormat = $format_opt;
+		$yy = $yyyy%100;
+		
+		$mm += 1; // 引数の月の値の範囲 month is 0 - 11
+		$strWithFormat = preg_replace('/YYYY/i', $yyyy, $strWithFormat);
+		$strWithFormat = preg_replace('/YY/i',   $yy,   $strWithFormat);
+		$strWithFormat = preg_replace('/MM/i',   $mm,   $strWithFormat);
+		$strWithFormat = preg_replace('/DD/i',   $dd,   $strWithFormat);
+
+		return $strWithFormat;
+	}
+
+	function set_head_declaration() {
+		global $html_transitional, $javascript;
+
+		// XHTML 1.0 Transitional
+		$html_transitional = TRUE;
+		
+		// <head> タグ内への <meta>宣言の追加
+		$javascript = TRUE;
+	}
 }
 
 class Tracker_field_strUtil {
-
 	function getArg_from_BlockTPluginStr($str, $pickup_arg_num) {
 		$matches = array();
 		if(preg_match_all("/(?:#.*\(([^\)]*)\))/", $str, $matches, PREG_SET_ORDER) )
@@ -1606,14 +1636,22 @@ class Tracker_field_strUtil {
 }
 
 
-// Update Logs - Modified by jjyun. (2004/10/16 - 2004/10/31) 
+// Update Logs - Modified by jjyun. (2004/10/16 - 2005/01/02) 
 //
 // pending... 
 //  - isset() is faster than array_key_exists().
 //     see... [[dev:開発日記/2004-06-30]] 変更すべきだろうか？
+//
 //  - config->config_name...
 //     Config classにはconfig_name は定義がないので間違いでは？
-//     (それとも、PHPではこういうsyntax が許されている？)
+//     (それとも、PHPではこういうsyntax が許されている？ 
+//       ... 許されているようです.未定義の変数にアクセスするとメンバー変数として作成されます
+//
+// ** differences between 1.1 and 1.2 **
+//  - datefield plugin との結び付きをなくすため、呼び出していたdatefield.inc.php の関数を
+//    Tracker_field_datefield 内に持ってくることにしました。
+//  - datefield 形式での初期値の表示において、日にちが1桁の場合に、3桁で表示される不具合を対処
+//  - 内部コードの clean up
 // 
 // ** differences between 1.0 and 1.1 **
 //  - Ver.1.0 で行った '/' のescape ロジック混入したフィルターの不具合を修正
