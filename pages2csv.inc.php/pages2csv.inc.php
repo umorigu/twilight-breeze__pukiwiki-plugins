@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.72 2005/01/22 23:09:21 jjyun Exp $
+// $Id: pages2csv.inc.php,v 0.8 2005/01/23 11:02:01 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -23,6 +23,9 @@ function plugin_pages2csv_init()
 	    '_pages2csv_messages' => array(
 					   'btn_submit' => '実行',
 					   'title_text' => 'CSVファイル生成：',
+					   'err_create_tmpfile' => '一時ファイルの作成に失敗：',
+					   'err_write_tmpfile' => '一時ファイルへの書き込みに失敗：',
+					   'err_rename_tmpfile' => '添付ファイルへの名称変更に失敗：',
 					   ),
 	    );
 	set_plugin_messages($messages);
@@ -179,7 +182,7 @@ function plugin_pages2csv_action()
 
 function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 {
-	global $_attach_messages;
+	global $_attach_messages, $_pages2csv_messages;
 
 	// 利用するプラグインの存在チェック
 	if (!exist_plugin('attach') or !function_exists('attach_upload')  )
@@ -269,11 +272,18 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 	}
 
 	// テンポラリファイルへの出力
-	$tempname = tempnam("","pages2csv_temp");
-	$fp = fopen($tempname,"w");
-	fwrite($fp,$pstr);
+	if( ! ( $tempname = tempnam("","pages2csv_temp") ) || 
+	    ! ( $fp = fopen($tempname,"w") ) )
+	{
+		return array('result'=>FALSE,'msg'=>$_pages2csv_messages['err_create_tmpfile']);
+	}
+	if( ! fwrite($fp,$pstr) ) 
+	{
+		unlink($tempname);
+		return array('result'=>FALSE,'msg'=>$_pages2csv_messages['err_write_tmpfile']);
+	}
 	fclose($fp);
-	
+
 	// 添付ファイル名の準備
 	$csvfilename = "pages2csv_". date("ymdHi",time());
 	if($encode != '')
@@ -297,11 +307,21 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 		unlink($tempname);
 		return array('result'=>FALSE,'msg'=>$_attach_messages['err_exists']);
 	}
-	if (rename($tempname,$obj->filename))
+
+	// 添付ファイルの名称変更
+	// PHP4.3.3未満では、rename()は*nixベースシステムにおいて、
+	// パーテーション越しにファイル名を変更することはできないため
+	// rename() の代わりに copy() を用いる
+	if ( copy($tempname,$obj->filename) )
 	{
 		chmod($obj->filename,PLUGIN_ATTACH_FILE_MODE);
+		unlink($tempname);
 	}
-	unlink($tempname);
+	else
+	{
+		unlink($tempname);
+		return array('result'=>FALSE,'msg'=>$_pages2csv_messages['err_rename_tmpfile']);
+	}
 
 	if (is_page($refer))
 	{
