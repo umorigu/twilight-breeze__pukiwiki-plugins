@@ -96,7 +96,7 @@ function plugin_pages2csv_convert()
   $pass = '';
   // attach.inc.php で アップロード/削除時にパスワードを要求する設定であった場合か
   // もしくは、CSVファイルの作成を管理者だけが行えるようにした場合
-  if ( ATTACH_PASSWORD_REQUIRE or PAGES2CSV_UPLOAD_ADMIN_ONLY)
+  if ( PLUGIN_ATTACH_PASSWORD_REQUIRE or PAGES2CSV_UPLOAD_ADMIN_ONLY)
     {
       $title = $_attach_messages[PAGES2CSV_UPLOAD_ADMIN_ONLY ?
 				'msg_adminpass' : 'msg_password'];
@@ -274,7 +274,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   }
   if (rename($tempname,$obj->filename))
   {
-    chmod($obj->filename,ATTACH_FILE_MODE);
+    chmod($obj->filename,PLUGIN_ATTACH_FILE_MODE);
   }
   unlink($tempname);
 
@@ -510,12 +510,27 @@ class Pages2csv_extract_arg_Condition
 		$str_plugin = ($this->target_plugin_type == 0) ? '\#' : '\&';
 		$str_plugin .= $this->target_plugin_name;
 
-		$var = Tracker_field_string_Utility::get_argument_from_plugin_string(
-			$var,
-			$this->extract_arg_num,
-			$this->target_plugin_name,
-			$this->target_plugin_type);
-
+		if (preg_match_all("/(?:$str_plugin\(([^\)]*)\))/", $var, $matches, PREG_SET_ORDER))
+		{
+			$paddata = preg_split("/$str_plugin\([^\)]*\)/", $var);
+			$var = $paddata[0];
+			foreach($matches as $i => $match)
+			{
+				$str_arg = $match[1];
+				$args = array();
+				$args = explode(",",$str_arg);
+				if( $this->extract_arg_num != NULL && 
+				    $this->extract_arg_num < count($args) )
+				{
+					$extract_arg = $args[ $this->extract_arg_num ];
+				}
+				else
+				{
+					$extract_arg = $str_plugin . $str_arg;
+				}
+			}
+			$var .= $extract_arg . $paddata[$i+1];
+		}
 		return $var;
 	}
 
