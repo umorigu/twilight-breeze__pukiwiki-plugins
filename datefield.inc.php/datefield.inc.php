@@ -20,6 +20,7 @@
 
 function plugin_datefield_action() {
   global $vars, $post;
+  global $html_transitional;
   check_editable($post['refer'], true, true);
 
   $number = 0;
@@ -139,9 +140,19 @@ function plugin_datefield_outputErrMsg($page, $errmsg){
 
 }  
 
-
-
 function plugin_datefield_convert() {
+  global $html_transitional, $head_tags;
+
+  // XHTML 1.0 Transitional
+  $html_transitional = TRUE;
+
+  // <head>タグ内への<meta>宣言の追加
+  $meta_str =
+   " <meta http-equiv=\"content-script-type\" content=\"text/javascript\" /> ";
+  if(! in_array($meta_str, $head_tags) ){
+    $head_tags[] = $meta_str;
+  }
+
   $number = plugin_datefield_getNumber();
   if(func_num_args() > 0) 
     {
@@ -180,7 +191,7 @@ function plugin_datefield_getBody($number, $value, $option) {
   $field_size = strlen($option); 
 
   $body .= <<<EOD
-    <form name="subClndr$number" action="$script_enc"
+    <form name="subClndr$number" id="subClndr$number" action="$script_enc"
     method='post' style="margin:0;">
     <div  style="white-space:nowrap; ">
     <input type="text" name="infield" value="$value" size="{$field_size}"
