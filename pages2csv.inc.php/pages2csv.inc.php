@@ -39,6 +39,7 @@ function plugin_pages2csv_convert()
   $limit = NULL;
   $filter = '';
   $encode = '';
+  $extract = '';
   
   static $numbers = array();
   if (!array_key_exists($page,$numbers)) $numbers[$page] = 0;
@@ -52,6 +53,8 @@ function plugin_pages2csv_convert()
       
       switch (count($args))
 	{
+	case 7:
+	  $extract = $args[6];
 	case 6:
 	  $encode = $args[5];
 	case 5:
@@ -87,7 +90,8 @@ function plugin_pages2csv_convert()
   $s_limit  = htmlspecialchars($limit);
   $s_filter = htmlspecialchars($filter);
   $s_encode = htmlspecialchars($encode);
-  
+  $s_extract = htmlspecialchars($extract);
+
   $pass = '';
   // attach.inc.php で アップロード/削除時にパスワードを要求する設定であった場合か
   // もしくは、CSVファイルの作成を管理者だけが行えるようにした場合
@@ -108,6 +112,7 @@ function plugin_pages2csv_convert()
 <input type="hidden" name="limit"  value="$s_limit" />
 <input type="hidden" name="filter" value="$s_filter" />
 <input type="hidden" name="encode" value="$s_encode" />
+<input type="hidden" name="extract" value="$s_extract" />
 EOD;
 
   return <<<EOD
@@ -176,19 +181,52 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   $supported_encodes = array("EUC-JP"=>"euc","SJIS"=>"sjis","JIS"=>"jis","UTF-8"=>"utf8");
 
   // 各種パラメータの読み込み
-  $config = array_key_exists('config',$vars) ? htmlspecialchars($vars['config']) : 'default';
   $list = array_key_exists('list',$vars)   ? htmlspecialchars($vars['list']) : 'list';
   $order = array_key_exists('order',$vars) ? htmlspecialchars($vars['order']) :'_real:SORT_DESC';
-  $filter = array_key_exists('filter',$vars) ? htmlspecialchars($vars['filter']) : NULL ;
   $encode = array_key_exists('encode',$vars) ? htmlspecialchars($vars['encode']) : NULL ;
-
   $limit = array_key_exists('limit',$vars) ? htmlspecialchars($vars['limit']) : NULL ;
   if( !is_numeric($limit) ) $limit= NULL;  // limit は数値データを取るため
 
-  // テンポラリファイルへの出力
-  $tempname = tempnam("","pages2csv_temp");
-  $fp = fopen($tempname,"w");
-  $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,$filter);
+  $config_name = array_key_exists('config',$vars) ? htmlspecialchars($vars['config']) : 'default';
+  $filter_name = array_key_exists('filter',$vars) ? htmlspecialchars($vars['filter']) : NULL ;
+  $extract_name = array_key_exists('extract',$vars) ? htmlspecialchars($vars['extract']) : NULL;
+
+  // tracker の config設定
+  $config = new Config('plugin/tracker/'.$config_name);
+  if(!$config->read()) {
+    return array( 'result' => FALSE,
+		  'msg' => "<p>config file '". htmlspecialchars($config_name). "' is not exist.",
+		  );
+  }
+  $config->config_name = $config_name;
+
+  // tracker_list の filter設定
+  if($filter_name != NULL) {
+    $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
+    
+    if(!$filter_config->read()) {
+      // filter の設定がなされていなければ、エラーログを返す
+      return array( 'result' => FALSE,
+		    'msg' => "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>",
+		   );
+    }
+  }
+
+  // pages2csv の extract設定
+  if($extract_name != NULL) {
+    $extract_config = new Config('plugin/pages2csv');
+    
+    if(!$extract_config->read()) {
+      // extract の設定がなされていなければ、エラーログを返す
+      return array( 'result' => FALSE,
+		    'msg' => "<p>config file '".htmlspecialchars($extract_config->page)."' not found</p>",
+		    );
+    }
+  }
+
+  $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,
+				      $filter_name, $filter_config,
+				      $extract_name, $extract_config);
   
   // 出力内容のエンコーディング処理
   if ($encode != '' ) {
@@ -200,9 +238,11 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
       $pstr=mb_convert_encoding($pstr,$encode);
   }
 
+  // テンポラリファイルへの出力
+  $tempname = tempnam("","pages2csv_temp");
+  $fp = fopen($tempname,"w");
   fwrite($fp,$pstr);
   fclose($fp);
-
   
   // 添付ファイル名の準備
   $csvfilename = "pages2csv_". date("ymdHi",time());
@@ -237,32 +277,20 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   }
 
   $obj->getstatus();
-  $obj->status['pass'] = ($pass !== NULL) ? md5($pass) : '';
+  $obj->status['pass'] = ($pass != NULL) ? md5($pass) : '';
   $obj->putstatus();
 
   return  array('result'=>TRUE,'msg'=>$_attach_messages['msg_uploaded']);
 }
 
 
-function plugin_pages2csv_getcsvlist($page,$refer,$config_name,
-$list,$order='', $limit=NULL, $filter_name=NULL)
+function plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order='', $limit=NULL,
+				     $filter_name=NULL,$filter_config=NULL,
+				     $extract_name=NULL, $extract_config=NULL)
 {
-  $config = new Config('plugin/tracker/'.$config_name);
-  if(!$config->read()) {
-    return "<p>config file	'". htmlspecialchars($config_name). "' is not exist.";
-  }
-  $config->config_name = $config_name;
 
-  if($filter_name != NULL) {
-    $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
-    
-    if(!$filter_config->read()) {
-      // filter の設定がなされていなければ、エラーログを返す
-      return "<p>config file '".htmlspecialchars($config->page.'filters')."' not found</p>";
-    }
-  }
-
-  $list = &new Tracker_csvlist($page,$refer,$config,$list,$filter_name);
+  $list = &new Pages2csv_Tracker_csvlist($page,$refer,$config,$list,$filter_name,
+					 $extract_name,$extract_config);
   if($filter_name != NULL) {
     $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
     $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
@@ -273,10 +301,23 @@ $list,$order='', $limit=NULL, $filter_name=NULL)
 }
 
 // CSV用一覧クラス
-class Tracker_csvlist extends Tracker_list
+class Pages2csv_Tracker_csvlist extends Tracker_list
 {
-  function replace_item($arr)
+  var $extract_arg_filter = NULL;
+
+  function Pages2csv_Tracker_csvlist($page,$refer,$config,$list,$filter_name,
+				     $extract_name,$extract_config)
+  {
+    $cache = NULL;
+    $this->Tracker_list($page,$refer,$config,$list,$filter_name,$cache);
+    if($extract_name != NULL && $extract_config != NULL) 
     {
+	$this->extract_arg_filter = new Pages2csv_extract_arg_filter($extract_name, $extract_config);
+    }
+  }
+
+  function replace_item($arr)
+  {
       $params = explode(',',$arr[1]);
       $name = array_shift($params);
       if ($name == '')
@@ -286,6 +327,12 @@ class Tracker_csvlist extends Tracker_list
       else if (array_key_exists($name,$this->items))
 	{
 	  $str = $this->items[$name];
+	  
+	  // 指定したプラグインの特定の場所の引数文字列を抽出する
+	  if( $this->extract_arg_filter != NULL ) {
+	    $str = $this->extract_arg_filter->extracts($str);
+	  }
+
 	  //	  if (array_key_exists($name,$this->fields))
 	  //  {
 	  //    $str = $this->fields[$name]->format_cell($str);
@@ -293,10 +340,12 @@ class Tracker_csvlist extends Tracker_list
 	}
       else
 	{
-	  return $this->pipe ? str_replace('|','&#x7c;',$arr[0]) : $arr[0] ;
+	  $str = $arr[0];
 	}
 
       // スタイル出力を除く
+      // ここでプラグインの引数を抽出する。
+
       return $this->pipe ? str_replace('|','&#x7c;',$str) : $str;
       
     }
@@ -343,7 +392,7 @@ class Tracker_csvlist extends Tracker_list
       $source = '';
       $body = array();
       
-      if($limit !== NULL and count($this->rows) > $limit)
+      if($limit != NULL and count($this->rows) > $limit)
 	{
 	  $source = str_replace(
 				array('$1','$2'),
@@ -399,4 +448,92 @@ class Tracker_csvlist extends Tracker_list
     }
 }
 
+class Pages2csv_extract_arg_filter
+{
+	var $extract_conditions = array();
+
+	function Pages2csv_extract_arg_filter($extract_name, $extract_config)
+	{
+		foreach( $extract_config->get($extract_name) as $extract )
+		{
+			array_push($this->extract_conditions,
+				   new Pages2csv_extract_arg_Condition($extract, $extract_name) );
+		}
+	}
+
+	function extracts($var)
+	{
+		foreach($this->extract_conditions as $extract_condition)
+		{
+		  $var = $extract_condition->extract($var);
+		}
+		return $var;
+	}
+
+	function toString()
+	{
+	        $ret = '';
+		foreach($this->extract_conditions as $extract_condition)
+		{
+		  $ret .= $extract_condition->toString();
+		}
+		return $ret;
+	}
+
+
+}
+
+class Pages2csv_extract_arg_Condition
+{
+	var $condition_name;
+	var $target_plugin_name;
+	var $target_plugin_type;  // block = 0 , inline = 1 (default = 0)
+	var $extract_arg_num;
+
+	function Pages2csv_extract_arg_Condition($field, $name)
+	{
+		$this->condition_name = $name;
+		$this->target_plugin_name = $field[0];
+		$this->target_plugin_type = ($field[1] == "inline") ? 1 : 0;
+		$this->extract_arg_num = is_numeric($field[2]) ? $field[2] : NULL ;
+	}
+  
+	function extract($var)
+	{
+		$str_plugin = ($this->target_plugin_type == 0) ? '\#' : '\&';
+		$str_plugin .= $this->target_plugin_name;
+
+		if (preg_match_all("/(?:$str_plugin\(([^\)]*)\))/", $var, $matches, PREG_SET_ORDER))
+		{
+			$paddata = preg_split("/$str_plugin\([^\)]*\)/", $var);
+			$var = $paddata[0];
+			foreach($matches as $i => $match)
+			{
+				$str_arg = $match[1];
+				$args = array();
+				$args = explode(",",$str_arg);
+				if( $this->extract_arg_num != NULL && 
+				    $this->extract_arg_num < count($args) )
+				{
+					$extract_arg = $args[ $this->extract_arg_num ];
+				}
+				else
+				{
+					$extract_arg = $str_plugin . $str_arg;
+				}
+			}
+			$var .= $extract_arg . $paddata[$i+1];
+		}
+		return $var;
+	}
+
+	function toString()
+	{
+		$str = "name : $this->condition_name | "
+		  . "target_plugin_name : $this->target_plugin_name | "
+		  . "target_plugin_type : $this->target_plugin_type | "
+		  . "extract_arg_num : $this->extract_arg_num | ";
+		return $str;
+	}
+}
 ?>
