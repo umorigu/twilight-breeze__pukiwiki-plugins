@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: linkvote.inc.php,v 0.1 2003/07/28 00:09:54 jjyun Exp $
+// $Id: linkvote.inc.php,v 0.2 2003/08/13 13:33:54 jjyun Exp $
 // based on vote2.inc.php, v 0.12 
 // 
 // vote2.inc.php, v 0.12 2003/10/05 17:55:04 sha 
@@ -326,7 +326,7 @@ EOD;
 
 function plugin_linkvote_action_inline($vote_no)
 {
-	global $get,$vars,$script,$cols,$rows, $_linkvote_messages;
+	global $vars,$script,$cols,$rows, $_linkvote_messages;
 	global $_title_collided,$_msg_collided,$_title_updated;
 	global $_vote_plugin_choice, $_vote_plugin_votes;
 	$str_notimestamp = $_linkvote_messages['arg_notimestamp'];
@@ -427,14 +427,13 @@ function plugin_linkvote_action_inline($vote_no)
 	$retvars['msg'] = $title;
 	$retvars['body'] = $body;
 
-	$get['page'] = $vars['refer'];
 	$vars['page'] = $vars['refer'];
 
 	return $retvars;
 }
 function plugin_linkvote_action_block($vote_no)
 {
-	global $post,$vars,$script,$cols,$rows, $_linkvote_messages;
+	global $vars,$script,$cols,$rows, $_linkvote_messages;
 	global $_title_collided,$_msg_collided,$_title_updated;
 	global $_vote_plugin_choice, $_vote_plugin_votes;
 	$str_notimestamp = $_linkvote_messages['arg_notimestamp'];
@@ -526,7 +525,6 @@ function plugin_linkvote_action_block($vote_no)
 	$retvars['msg'] = $title;
 	$retvars['body'] = $body;
 
-	$post['page'] = $vars['refer'];
 	$vars['page'] = $vars['refer'];
 
 	return $retvars;
