@@ -1,5 +1,5 @@
 /* *******************************************************************
- * dspCalendar.js : modified by jjyun (2003-2004) SubWindow-Ver.1.0
+ * dspCalendar.js : modified by jjyun (2003-2005) SubWindow-Ver.1.1
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -114,8 +114,10 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
 
     // 週の設定
     if( browserLang.search(/ja/i) != -1 ) {
+      this.titleToday = '今日：';
       this.week = new Array('日','月','火','水','木','金','土');
     } else {
+      this.titleToday = 'Today:';
       this.week = new Array('Sun','Mon','Tue','Wed','Thr','Fri','Sat');
     }
 
@@ -126,10 +128,29 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
 
   // カレンダー構築用HTML(フッター)
   // ステータス行 日付タイプ
+  /*
   var footHTML = '<tr>\n'
     + '  <td colspan="7" align="center" class="datefield-footer">\n'
     + '<b>'+ dspCalendar.dateFormatType 
     + '</b>\n </td>\n </tr>\n'
+    + '<tr>\n '
+    + '  <td colspan="7" align="center" class="datefield-footer">\n';
+  */
+  var footHTML = '<tr>\n'
+    + '  <td colspan="7" align="center" class="datefield-footer">\n'
+    + '<b>'+ this.titleToday 
+  // 今日の日付もリンク扱いにする
+    + '<a href="javascript:function v(){ '
+    + "self.opener.document." + obj.form.name + "." + obj.name
+    + '.value=('
+    + dateWithFormat(this.nowyear, this.nowmonth, this.nowdate ) + ');';
+
+  if(this.doSubmit == 1){
+    footHTML += 'self.opener.document.' + obj.form.name + '.submit();';
+  }
+
+  footHTML += 'self.close()};v()" >\n'
+    + dateWithFormat(this.nowyear, this.nowmonth, this.nowdate ) + '</a> </b>\n </td>\n </tr>\n'
     + '<tr>\n '
     + '  <td colspan="7" align="center" class="datefield-footer">\n';
 

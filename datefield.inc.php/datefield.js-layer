@@ -1,5 +1,5 @@
 /* *******************************************************************
- * datefield-lay.js : modified by jjyun (2003-2004) Layer-Ver.1.0
+ * datefield-lay.js : modified by jjyun (2003-2005) Layer-Ver.1.1
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -110,9 +110,13 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
    + 'document.' + obj.form.name + '.' + obj.name
    + '.value=('
    + dateWithFormat(this.dateFormatType, this.nowyear, this.nowmonth, this.nowdate )+ ');'
-   + 'stop_event__dragLay(); '
-   + 'document.' + obj.form.name + '.submit();'
-   + 'setDivVisibility(\'calendar\',false); };lay_v()" >\n'
+   + 'stop_event__dragLay(); ';
+
+  if(this.doSubmit == 1) {
+    dspCalendar.footHTML += 'document.' + obj.form.name + '.submit();';
+  }
+
+   dspCalendar.footHTML += 'setDivVisibility(\'calendar\',false); };lay_v()" >\n'
 
    +  dateWithFormat( this.dateFormatType ,
         this.nowyear,  this.nowmonth ,this.nowdate) + '</b>'
