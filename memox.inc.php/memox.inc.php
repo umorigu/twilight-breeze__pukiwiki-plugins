@@ -1,5 +1,5 @@
 <?php
-// $Id: memox.inc.php,v 0.4 2004/09/03 01:03:21 jjyun Exp $
+// $Id: memox.inc.php,v 0.5 2004/11/23 22:12:21 jjyun Exp $
 /**
  * PukiWiki メモ拡張プラグイン(memo eXtented plugin)
  * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
@@ -67,6 +67,7 @@ function plugin_memox_action()
 	$memo_body = str_replace("\n", "\\n", $memo_body);
 	$memo_body = str_replace('"', '&#x22;', $memo_body); // Escape double quotes
 	$memo_body = str_replace(',', '&#x2c;', $memo_body); // Escape commas
+	$memo_body = str_replace(')', '&#x29;', $memo_body); // Escape closese-parenthesis
 
 	$postdata_old  = get_source($vars['refer']);
 	$postdata = '';
@@ -78,16 +79,19 @@ function plugin_memox_action()
 	    continue;
 	  }
 
+	  // ブロックプラグインの場合は、表の中の利用も考慮すること
 	  if(preg_match_all('/(?:#memox\(([^\)]*)\))/', $line,$matches, PREG_SET_ORDER))
 	  {
-	    $paddata = preg_split('/#memox\(([^\)]*)\)/', $line);
+	    $paddata = preg_split('/#memox\([^\)]*\)/', $line);
 	    $line = $paddata[0];
 	    foreach($matches as $i => $match) 
 	    {
-	      $opt = $match[1];
-	      if ($memox_no++ == $vars['memox_no']) {
+	      if ($vars['memox_no'] == $memox_no++ ) {
+		// ターゲットのプラグイン部分
 		$opt = "$s_cols,$s_rows,$s_blabel";
 		$opt .= ",". MEMOX_DELIM_STR . ",$memo_body";
+	      }else {
+		$opt = $match[1];
 	      }
 	      $line .= "#memox($opt)" . $paddata[$i+1];
 	    }
@@ -168,6 +172,7 @@ function plugin_memox_convert()
 	$data = implode(',', $data);	// Care all arguments
 	$data = str_replace('&#x2c;', ',', $data); // Unescape commas
 	$data = str_replace('&#x22;', '"', $data); // Unescape double quotes
+	$data = str_replace('&#x29;', ')', $data); // Unescape closese-parenthesis
 	$data = htmlspecialchars(str_replace("\\n", "\n", $data));
 	$s_page   = htmlspecialchars($vars['page']);
 	$s_digest = htmlspecialchars($digest);
