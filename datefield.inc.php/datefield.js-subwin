@@ -28,10 +28,10 @@ dspCalendar.offsetX =  50;
 dspCalendar.offsetY = -30;
 
 // カレンダの大きさの指定 
-dspCalendar.width  = 160;
+dspCalendar.width  = 180;
 dspCalendar.height = 250;
 if(isMOZ)
-  dspCalendar.height = 220;
+  dspCalendar.height = 260;
   
 // ===================================================================
 
