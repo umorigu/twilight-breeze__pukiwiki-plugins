@@ -1,5 +1,5 @@
 /* *******************************************************************
- * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.7.2
+ * dspCalendar.js : modified by jjyun (2003-2004) SubWindow-Ver.0.7.3
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -57,7 +57,9 @@ dspCalendar.headHTML =
   + '  type="text/css" media="screen" charset="shift_jis" /> \n'
   + ' </head>\n <body class="datefield">\n'
   + ' <div style="text-align: center;"> \n'
+  + ' <script type="text/javascript" src="skin/datefield.js" ></script>\n'
   + ' <table border="0" width="140" class="datefield" > \n';
+
 
 // 注意: stdMonth は 1月が0、... 12月は11 で指定すること
 function dspCalendar(obj, event, dateFormatType, diffMonth,
@@ -221,7 +223,7 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
        }
 
        cldrHTML += 'self.close()};v()" >\n'
-       	 += wrtDD + '</a> </td>\n';
+       	 + wrtDD + '</a> </td>\n';
     }
     cldrHTML += '</tr>\n';
   }
