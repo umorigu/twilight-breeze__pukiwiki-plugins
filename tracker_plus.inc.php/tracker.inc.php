@@ -4,8 +4,8 @@
 //
 // $Id: tracker.inc.php,v 1.26 2004/12/02 11:34:25 henoheno Exp $
 //
-// This script is modified by jjyun. (2004/02/22 - 2005/01/09) 
-//   tracker.inc.php-modified, v 1.2 2005/01/09 19:05:06 jjyun
+// This script is modified by jjyun. (2004/02/22 - 2005/01/16) 
+//   tracker.inc.php-modified, v 1.2 2005/01/16 12:18:56 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 // UpdateLog : スクリプトの最後に移動しました。
@@ -1096,9 +1096,7 @@ class Tracker_list
 		rewind($fp);
 
 		// This will get us the main column names.
-
-	//	$column_names = csv_explode('","', fgets($fp, filesize($cachefile)));
-	//	while ($arr = csv_explode('","', fgets($fp, filesize($cachefile))))
+		// (jjyun) I tryed csv_explode() function , but this behavior is not match as I wanted.
 
 		$column_names = fgetcsv($fp, filesize($cachefile));
 		while ($arr = fgetcsv($fp, filesize($cachefile)) )
@@ -1177,7 +1175,6 @@ class Tracker_list
 					    array('_page','_refer','_real','_update'));
                 $column_names = array_unique($column_names);
 
-	//	fputs($fp, csv_implode('","', $column_names)."\n");
 		fputs($fp, "\"" . implode('","', $column_names)."\"\n");
 
 		foreach ($this->rows as $row)
@@ -1185,10 +1182,8 @@ class Tracker_list
 			$arr = array();
 			foreach ( $column_names as $key)
 			{
-	 //			$arr[$key] = $row[$key];
 	 			$arr[$key] = addslashes($row[$key]);
 			}
-	//	fputs($fp, csv_implode('","', $arr)."\n");
 		fputs($fp, "\"" . implode('","', $arr) . "\"\n");
 		}
 		flock($fp, LOCK_UN);
@@ -1463,10 +1458,8 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 		  htmlspecialchars($this->values[0]) : '' ;
 		$target_plugin_name = array_key_exists(1,$this->values) ?
 		  htmlspecialchars($this->values[1]) : '*' ;
-		$target_plugin_type = (array_key_exists(2,$this->values) and is_numeric($this->values[2])) ?
-		  htmlspecialchars($this->values[2]) : 0 ;
-		$expatern_with_argument = array_key_exists(3,$this->values) ?
-		  htmlspecialchars($this->values[3]) : null ;
+		$target_plugin_type = array_key_exists(2,$this->values) ?
+		  htmlspecialchars($this->values[2]) : 'block' ;
     
 		// オプションの指定がなければ、拡張処理は行わない
 		if($extract_arg_num == '')
@@ -1540,6 +1533,34 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 class Tracker_field_hidden3 extends Tracker_field_hidden2
 {
 	var $sort_type = SORT_NUMERIC;
+	// (sortの適用時に、利用されている)
+	// 引数(page内の該当部分)に対して、configページのオプション指定に従って、
+	// ブロック型のプラグイン引数から指定された部分の文字列を
+	// 切り出した値を返す処理を含む
+	function get_value($value)
+	{
+		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
+		  htmlspecialchars($this->values[0]) : '' ;
+		$target_plugin_name = array_key_exists(1,$this->values) ?
+		  htmlspecialchars($this->values[1]) : '*' ;
+		$target_plugin_type = array_key_exists(2,$this->values) ?
+		  htmlspecialchars($this->values[2]) : 'block' ;
+    
+		// オプションの指定がなければ、拡張処理は行わない
+		if($extract_arg_num == '')
+		{
+		  return $value;
+		}
+
+		// 指定されたプラグインから位置の引数を抽出する
+		$arg = Tracker_field_string_Utility::get_argument_from_plugin_string(
+			    $value, $extract_arg_num, $target_plugin_name, $target_plugin_type);
+
+		// 抽出した位置の引数に対して、さらに正規表現による抽出指定があればそれを行う
+		$arg = (preg_match("/(\d+)/",$arg,$match) ) ? $match[1] : 0;
+
+		return $arg;
+	}
 }
 
 class Tracker_field_datefield extends Tracker_field
@@ -1640,15 +1661,15 @@ class Tracker_field_string_utility {
   	function get_argument_from_block_type_plugin_string($str,
 						      $extract_arg_num = 0,
 						      $plugin_name = '.*' ) {
-	  return Tracker_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,0);
+	  return Tracker_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,'block');
 	}
   
 	// plugin_type : block type = 0, inline type = 1.
 	// extract_arg_num : first argument number is 0.  
 	function get_argument_from_plugin_string($str, 
-						 $extract_arg_num, $plugin_name, $plugin_type)
+						 $extract_arg_num, $plugin_name, $plugin_type = 'block')
 	{
-		$str_plugin = ($plugin_type == 1) ? '\&' : '\#' ;
+		$str_plugin = ($plugin_type == 'inline') ? '\&' : '\#' ;
 		$str_plugin .= $plugin_name;
 
 		$matches = array();
@@ -1693,22 +1714,16 @@ class Tracker_field_string_utility {
 //  - isset() is faster than array_key_exists().
 //     see... [[dev:開発日記/2004-06-30]] 変更すべきだろうか？
 //
-//  - config->config_name...
-//     Config classにはconfig_name は定義がないので間違いでは？
-//     (それとも、PHPではこういうsyntax が許されている？ 
-//       ... 許されているようです.未定義の変数にアクセスするとメンバー変数として作成されます
-//
 // ** differences between 1.1 and 1.2 **
+//  - cache機能の不具合の修正
 //  - datefield plugin との結び付きをなくすため、呼び出していた
-//     datefield.inc.php の関数をTracker_field_datefield 内に
-//     持ってくることにしました。
+//     datefield.inc.php の関数をTracker_field_datefield 内にコピーする。
 //  - datefield 形式での初期値の表示において、日にちが1桁の場合に、
 //     3桁で表示される不具合を対処
 //  - pages2csv.inc.php から utility function を取り込み、改良する
-//  - hidden2 形式の機能追加
-//    （指定された位置にある引数の文字列に対して、正規表現による追加を指示できるようにする)
 //  - hidden3 形式の追加
-//    （hidden2 と同機能だが、sort形式が NUMERIC もの)
+//    （hidden2 と同機能だが、sort形式が NUMERIC,
+//      プラグインの引数指定がある場合には、対象文字列から数値を抜き出す )
 //  - 内部コードの clean up
 // 
 // ** differences between 1.0 and 1.1 **
