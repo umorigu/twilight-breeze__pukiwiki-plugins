@@ -1456,7 +1456,7 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
 		  htmlspecialchars($this->values[0]) : '' ;
 		$target_plugin_name = array_key_exists(1,$this->values) ?
-		  htmlspecialchars($this->values[1]) : '*' ;
+		  htmlspecialchars($this->values[1]) : '.*' ;
 		$target_plugin_type = array_key_exists(2,$this->values) ?
 		  htmlspecialchars($this->values[2]) : 'block' ;
     
@@ -1541,7 +1541,7 @@ class Tracker_field_hidden3 extends Tracker_field_hidden2
 		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
 		  htmlspecialchars($this->values[0]) : '' ;
 		$target_plugin_name = array_key_exists(1,$this->values) ?
-		  htmlspecialchars($this->values[1]) : '*' ;
+		  htmlspecialchars($this->values[1]) : '.*' ;
 		$target_plugin_type = array_key_exists(2,$this->values) ?
 		  htmlspecialchars($this->values[2]) : 'block' ;
     
@@ -1670,7 +1670,7 @@ class Tracker_field_string_utility {
 	{
 		$str_plugin = ($plugin_type == 'inline') ? '\&' : '\#' ;
 		$str_plugin .= $plugin_name;
-
+		
 		$matches = array();
 
 		// 複数のplugin指定が存在する場合でも全てに対して抽出を行う
