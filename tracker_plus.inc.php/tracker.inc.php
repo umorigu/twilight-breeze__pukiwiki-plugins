@@ -4,8 +4,8 @@
 //
 // $Id: tracker.inc.php,v 1.26 2004/12/02 11:34:25 henoheno Exp $
 //
-// This script is modified by jjyun. (2004/02/22 - 2005/01/02) 
-//   tracker.inc.php-modified, v 1.2 2005/01/02 16:37:56 jjyun
+// This script is modified by jjyun. (2004/02/22 - 2005/01/09) 
+//   tracker.inc.php-modified, v 1.2 2005/01/09 19:05:06 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 // UpdateLog : スクリプトの最後に移動しました。
@@ -979,7 +979,6 @@ class Tracker_list
 			return '';
 		}
 
-		// jjyun's ...
 		$htmls = $this->get_cache_cnvrt();
 		if( strlen($htmls) > 0 )
 		{
@@ -1018,7 +1017,6 @@ class Tracker_list
 			}
 		}
 
-//		return convert_html($source);
 		$htmls = convert_html($source);
 		$this->put_cache_cnvrt($htmls);
 
@@ -1111,9 +1109,7 @@ class Tracker_list
 				$column_name = $column_names[$key];
 				if( isset($this->fields[$column_name]) )
 				{
-	  //					$row[$column_name] = addslashes($value);
 					$row[$column_name] = stripslashes($value);
-				  
 				}
 			}
 
@@ -1433,7 +1429,7 @@ class Tracker_field_select2 extends Tracker_field_select
 	function get_key($str)
 	{
 		// 該当フィールドのBlockPluginを為す文字列から0番目の引数にあたる文字列を読み取る
-		$arg= Tracker_field_strUtil::getArg_from_BlockTPluginStr($str,0);
+		$arg= Tracker_field_string_utility::get_argument_from_block_type_plugin_string($str);
 
 		// configページで設定された属性値と比較する
 		foreach ($this->config->get($this->name) as $option) {
@@ -1463,17 +1459,32 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 	// 切り出した値を返す処理を含む
 	function get_value($value)
 	{
-		$pickup_arg_num =
-		  (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
+		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
 		  htmlspecialchars($this->values[0]) : '' ;
+		$target_plugin_name = array_key_exists(1,$this->values) ?
+		  htmlspecialchars($this->values[1]) : '*' ;
+		$target_plugin_type = (array_key_exists(2,$this->values) and is_numeric($this->values[2])) ?
+		  htmlspecialchars($this->values[2]) : 0 ;
+		$expatern_with_argument = array_key_exists(3,$this->values) ?
+		  htmlspecialchars($this->values[3]) : null ;
     
 		// オプションの指定がなければ、拡張処理は行わない
-		if($pickup_arg_num == '')
+		if($extract_arg_num == '')
 		{
 		  return $value;
 		}
 
-		$arg= Tracker_field_strUtil::getArg_from_BlockTPluginStr($value,$pickup_arg_num);
+		// 指定されたプラグインから位置の引数を抽出する
+		$arg = Tracker_field_string_Utility::get_argument_from_plugin_string(
+			    $value, $extract_arg_num, $target_plugin_name, $target_plugin_type);
+
+		// 抽出した位置の引数に対して、さらに正規表現による抽出指定があればそれを行う
+		if( $expatern_with_argument != null && 
+		    preg_match("/$expatern_with_argument/",$arg,$match) )
+		{
+			$arg = $match[1];
+		}
+
 		return $arg;
 	}
 	// 引数(page内の該当部分)に対して、
@@ -1526,6 +1537,11 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 		return parent::format_value($str);
 	}
 }
+class Tracker_field_hidden3 extends Tracker_field_hidden2
+{
+	var $sort_type = SORT_NUMERIC;
+}
+
 class Tracker_field_datefield extends Tracker_field
 {
 	function get_tag()
@@ -1558,7 +1574,7 @@ EOD;
 	// 該当部分に含まれるブロックプラグインの0番目の引数を返す
 	function get_value($value)
 	{
-		$arg= Tracker_field_strUtil::getArg_from_BlockTPluginStr($value,0);
+		$arg= Tracker_field_string_utility::get_argument_from_block_type_plugin_string($value,0,'datefield');
 		return $arg;
 	}
 
@@ -1619,18 +1635,53 @@ EOD;
 	}
 }
 
-class Tracker_field_strUtil {
-	function getArg_from_BlockTPluginStr($str, $pickup_arg_num) {
+class Tracker_field_string_utility {
+  
+  	function get_argument_from_block_type_plugin_string($str,
+						      $extract_arg_num = 0,
+						      $plugin_name = '.*' ) {
+	  return Tracker_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,0);
+	}
+  
+	// plugin_type : block type = 0, inline type = 1.
+	// extract_arg_num : first argument number is 0.  
+	function get_argument_from_plugin_string($str, 
+						 $extract_arg_num, $plugin_name, $plugin_type)
+	{
+		$str_plugin = ($plugin_type == 1) ? '\&' : '\#' ;
+		$str_plugin .= $plugin_name;
+
 		$matches = array();
-		if(preg_match_all("/(?:#.*\(([^\)]*)\))/", $str, $matches, PREG_SET_ORDER) )
+
+		// 複数のplugin指定が存在する場合でも全てに対して抽出を行う
+		if( preg_match_all("/(?:$str_plugin\(([^\)]*)\))/", $str, $matches, PREG_SET_ORDER) )
 		{
-			$opt = $matches[0][1];
-			$opt_array = preg_split("/,/", $opt);
-			if( $pickup_arg_num < count($opt_array) )
+			$paddata = preg_split("/$str_plugin\([^\)]*\)/", $str);
+			$str = $paddata[0];
+                        foreach($matches as $i => $match)
 			{
-			    return $opt_array[$pickup_arg_num];
+				$args = array();
+
+				$str_arg = $match[1];
+				$args = explode("," , $str_arg);
+				if( is_numeric($extract_arg_num) && $extract_arg_num < count($args) )
+				{
+					$extract_arg = $args[ $extract_arg_num ];
+				}
+				else
+				{
+		  			$extract_arg = $str_plugin . $str_arg;
+				}
 			}
-		}
+			// block-type,inline-type のプラグイン指定において、
+			// 最後の括弧の後にセミコロンがある場合とない場合が存在するため、
+			// セミコロンが直後にあった場合は、プラグイン指定の一部と捉えて除去を行う
+			if( preg_match("/^\;.*$/",$paddata[$i+1],$exrep) )
+			{
+				$paddata[$i+1] = $exrep[1];
+			}
+                        $str .= $extract_arg . $paddata[$i+1];
+                }
 		return $str;
 	}
 }
@@ -1648,9 +1699,16 @@ class Tracker_field_strUtil {
 //       ... 許されているようです.未定義の変数にアクセスするとメンバー変数として作成されます
 //
 // ** differences between 1.1 and 1.2 **
-//  - datefield plugin との結び付きをなくすため、呼び出していたdatefield.inc.php の関数を
-//    Tracker_field_datefield 内に持ってくることにしました。
-//  - datefield 形式での初期値の表示において、日にちが1桁の場合に、3桁で表示される不具合を対処
+//  - datefield plugin との結び付きをなくすため、呼び出していた
+//     datefield.inc.php の関数をTracker_field_datefield 内に
+//     持ってくることにしました。
+//  - datefield 形式での初期値の表示において、日にちが1桁の場合に、
+//     3桁で表示される不具合を対処
+//  - pages2csv.inc.php から utility function を取り込み、改良する
+//  - hidden2 形式の機能追加
+//    （指定された位置にある引数の文字列に対して、正規表現による追加を指示できるようにする)
+//  - hidden3 形式の追加
+//    （hidden2 と同機能だが、sort形式が NUMERIC もの)
 //  - 内部コードの clean up
 // 
 // ** differences between 1.0 and 1.1 **
