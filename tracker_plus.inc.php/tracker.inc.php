@@ -5,7 +5,7 @@
 // $Id: tracker.inc.php,v 1.27 2005/01/15 09:35:58 henoheno Exp $
 //
 // This script is modified by jjyun. (2004/02/22 - 2005/01/22) 
-//   tracker.inc.php-modified, v 1.3 2005/01/16 19:25:52 jjyun
+//   tracker.inc.php-modified, v 1.3 2005/01/22 19:25:52 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 // UpdateLog : スクリプトの最後に移動しました。
