@@ -2,11 +2,11 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.5 2004/08/13 15:01:22 jjyun Exp $
+// $Id: pages2csv.inc.php,v 0.6 2004/08/29 17:03:22 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
-define('PAGES2CSV_UPLOAD_ADMIN_ONLY',TRUE); // FALSE or TRUE
+define('PAGES2CSV_UPLOAD_ADMIN_ONLY',FALSE); // FALSE or TRUE
 /////////////////////////////////////////////////
 
 require_once( PLUGIN_DIR . 'tracker.inc.php');
@@ -38,6 +38,7 @@ function plugin_pages2csv_convert()
   $list = 'list';
   $limit = NULL;
   $filter = '';
+  $encode = '';
   
   static $numbers = array();
   if (!array_key_exists($page,$numbers)) $numbers[$page] = 0;
@@ -51,6 +52,8 @@ function plugin_pages2csv_convert()
       
       switch (count($args))
 	{
+	case 6:
+	  $encode = $args[5];
 	case 5:
 	  $filter = $args[4];
 	case 4:
@@ -83,6 +86,7 @@ function plugin_pages2csv_convert()
   $s_order  = htmlspecialchars($order);
   $s_limit  = htmlspecialchars($limit);
   $s_filter = htmlspecialchars($filter);
+  $s_encode = htmlspecialchars($encode);
   
   $pass = '';
   // attach.inc.php で アップロード/削除時にパスワードを要求する設定であった場合か
@@ -103,6 +107,7 @@ function plugin_pages2csv_convert()
 <input type="hidden" name="order"  value="$s_order" />
 <input type="hidden" name="limit"  value="$s_limit" />
 <input type="hidden" name="filter" value="$s_filter" />
+<input type="hidden" name="encode" value="$s_encode" />
 EOD;
 
   return <<<EOD
@@ -167,23 +172,43 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
     return array('msg'=>'attach.inc.php not found or not correct version.');
   }
 
+  // 出力用エンコードのサポート一覧(PHP4の参考書より)
+  $supported_encodes = array("EUC-JP"=>"euc","SJIS"=>"sjis","JIS"=>"jis","UTF-8"=>"utf8");
+
   // 各種パラメータの読み込み
   $config = array_key_exists('config',$vars) ? htmlspecialchars($vars['config']) : 'default';
   $list = array_key_exists('list',$vars)   ? htmlspecialchars($vars['list']) : 'list';
   $order = array_key_exists('order',$vars) ? htmlspecialchars($vars['order']) :'_real:SORT_DESC';
   $filter = array_key_exists('filter',$vars) ? htmlspecialchars($vars['filter']) : NULL ;
+  $encode = array_key_exists('encode',$vars) ? htmlspecialchars($vars['encode']) : NULL ;
+
   $limit = array_key_exists('limit',$vars) ? htmlspecialchars($vars['limit']) : NULL ;
-  $limit = is_numeric($limit) ? $limit : NULL;  // limit は数値データを取るため
+  if( !is_numeric($limit) ) $limit= NULL;  // limit は数値データを取るため
 
   // テンポラリファイルへの出力
   $tempname = tempnam("","pages2csv_temp");
   $fp = fopen($tempname,"w");
   $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,$filter);
+  
+  // 出力内容のエンコーディング処理
+  if ($encode != '' ) {
+    if( !function_exists('mb_convert_encoding') )
+      return   array('result'=>FALSE,'msg'=>'mb_convert_encoding is not installed.\n');
+    else if(! array_key_exists($encode,$supported_encodes) )
+      return   array('result'=>FALSE,'msg'=>"\"$encode\" is not suppoted.\n");
+    else 
+      $pstr=mb_convert_encoding($pstr,$encode);
+  }
+
   fwrite($fp,$pstr);
   fclose($fp);
 
+  
   // 添付ファイル名の準備
-  $csvfilename = "pages2csv_". date("ymdHi",time()).".csv";
+  $csvfilename = "pages2csv_". date("ymdHi",time());
+  if($encode != '')
+    $csvfilename .= ".".$supported_encodes[$encode];
+  $csvfilename .= ".csv";
 
   // 以下、attach.inc.php の attach_upload()関数を参考にした
   // (理由)扱うファイルがHTTP POSTでアップロードしたファイルではないため、
