@@ -1,14 +1,57 @@
 <?php
-// $Id: memox.inc.php,v 0.3 2004/09/03 01:03:21 jjyun Exp $
-//  this script based .. memo.inc.php,v 1.11 2004/07/24 14:58:41 henoheno Exp $
+// $Id: memox.inc.php,v 0.4 2004/09/03 01:03:21 jjyun Exp $
+/**
+ * PukiWiki メモ拡張プラグイン(memo eXtented plugin)
+ * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
+ *
+ * License: PukiWiki 本体と同じく GNU General Public License (GPL) です
+ * http://www.gnu.org/licenses/gpl.txt
+ *
+ * Description:
+ *  #memox([column],[rows],[title],DELIM-STR,[contents])
+ * 
+ * このコードの説明は、PukiWiki本体に同梱されている memo.inc.php,v 1.11 に
+ * カラム,行数,更新ボタンのラベルを設置時に変更できるよう修正を加えたものです。
+ */
 
 /////////////////////////////////////////////////
 // テキストエリアのカラム数
 define('MEMOX_DEFAULT_COLS', 80);
 // テキストエリアの行数
 define('MEMOX_DEFAULT_ROWS', 5);
+// デリミタ(DELIM-STR)の設定
+define('MEMOX_DELIM_STR',  '<DELIM>');
 
 /////////////////////////////////////////////////
+
+function plugin_memox_init()
+{
+  switch (LANG) {
+  case 'ja' :
+    $msg = plugin_memox_init_ja();
+    break;
+  default:
+    $msg = plugin_memox_init_en();
+  }
+  set_plugin_messages($msg);
+}
+
+function plugin_memox_init_ja()
+{
+  $msg = array(
+	       '_btn_memox_update' => "更新",
+	       );
+  return $msg;
+}
+
+function plugin_memox_init_en()
+{
+  $msg = array(
+	       '_btn_memox_update' => "Update",
+	       );
+  return $msg;
+}
+
 function plugin_memox_action()
 {
 	global $script, $vars, $cols, $rows;
@@ -16,8 +59,9 @@ function plugin_memox_action()
 
 	if (! isset($vars['msg']) || $vars['msg'] == '') return;
 
-	$s_cols = htmlspecialchars($vars['cols']);
-	$s_rows = htmlspecialchars($vars['rows']);
+	$s_cols  = htmlspecialchars($vars['cols']);
+	$s_rows  = htmlspecialchars($vars['rows']);
+	$s_blabel = htmlspecialchars($vars['blabel']);
 
 	$memo_body = preg_replace("/\r/", '', $vars['msg']);
 	$memo_body = str_replace("\n", "\\n", $memo_body);
@@ -29,8 +73,10 @@ function plugin_memox_action()
 	$memox_no = 0;
 	foreach($postdata_old as $line)
 	{
-	  if(preg_match('/^(?:\/\/| )/', $line)) // Skip Comment lines 
-	    continue;  
+	  if(preg_match('/^(?:\/\/| )/', $line)){ // Skip Comment lines 
+	    $postdata .= $line;
+	    continue;
+	  }
 
 	  if(preg_match_all('/(?:#memox\(([^\)]*)\))/', $line,$matches, PREG_SET_ORDER))
 	  {
@@ -39,9 +85,9 @@ function plugin_memox_action()
 	    foreach($matches as $i => $match) 
 	    {
 	      $opt = $match[1];
-	      if ($memox_no++ == $vars['memox_no'])
-	      {
-		$opt = "$s_cols,$s_rows,$memo_body";
+	      if ($memox_no++ == $vars['memox_no']) {
+		$opt = "$s_cols,$s_rows,$s_blabel";
+		$opt .= ",". MEMOX_DELIM_STR . ",$memo_body";
 	      }
 	      $line .= "#memox($opt)" . $paddata[$i+1];
 	    }
@@ -88,7 +134,8 @@ EOD;
 function plugin_memox_convert()
 {
 	global $script, $vars, $digest;
-	global $_btn_memo_update;
+	global $_btn_memox_update;
+
 	static $numbers = array();
 
 	if (! isset($numbers[$vars['page']]))
@@ -99,10 +146,24 @@ function plugin_memox_convert()
 
 	$data = func_get_args();
 
-	$s_cols = htmlspecialchars( array_shift($data) );
-	$s_rows = htmlspecialchars( array_shift($data) );
+	// split delim
+	$delim_pos = array_search(MEMOX_DELIM_STR,$data);
+	if($delim_pos === FALSE){
+	  $func_args = $data;
+	  $data = '';
+	}
+	else {
+	  $func_args = array_splice($data, 0, $delim_pos);
+	  array_shift($data);
+	}
+
+	$s_cols = htmlspecialchars( array_shift($func_args) );
+	$s_rows = htmlspecialchars( array_shift($func_args) );
+	$s_blabel = htmlspecialchars( array_shift($func_args) );
+
 	if(! is_numeric($s_cols)) $s_cols = MEMOX_DEFAULT_COLS;
 	if(! is_numeric($s_rows)) $s_rows = MEMOX_DEFAULT_ROWS;
+	if($s_blabel == NULL) $s_blabel = $_btn_memox_update;
 
 	$data = implode(',', $data);	// Care all arguments
 	$data = str_replace('&#x2c;', ',', $data); // Unescape commas
@@ -115,11 +176,12 @@ function plugin_memox_convert()
 <form action="$script" method="post" class="memo" style="margin:0;"> 
  <div>
   <input type="hidden" name="memox_no" value="$memox_no" />
-  <input type="hidden" name="refer"   value="$s_page" />
-  <input type="hidden" name="plugin"  value="memox" />
-  <input type="hidden" name="digest"  value="$s_digest" />
-  <input type="hidden" name="cols"    value="$s_cols" />
-  <input type="hidden" name="rows"    value="$s_rows" />
+  <input type="hidden" name="refer"    value="$s_page" />
+  <input type="hidden" name="plugin"   value="memox" />
+  <input type="hidden" name="digest"   value="$s_digest" />
+  <input type="hidden" name="cols"     value="$s_cols" />
+  <input type="hidden" name="rows"     value="$s_rows" />
+  <input type="hidden" name="blabel"    value="$s_blabel" />
 EOD;
 	if($s_rows < 2) {
 	  $string .= <<<EOF
@@ -133,7 +195,7 @@ EOF;
 	}
    
 	$string .= <<<EOD
-  <input type="submit" name="memox"    value="$_btn_memo_update" />
+  <input type="submit" name="memox" value="$s_blabel" />
  </div>
 </form>
 EOD;
