@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.2 2004/04/26 04:27:31 jjyun Exp $
+// $Id: pages2csv.inc.php,v 0.3 2004/07/08 05:30:31 jjyun Exp $
 //
 // 
 
@@ -99,7 +99,7 @@ function plugin_pages2csv_convert()
   $retval .=<<<EOD
 <input type="hidden" name="plugin" value="pages2csv" />
 <input type="hidden" name="refer"  value="$refer" />
-<input type="hidden" name="page"   value="$page" />
+<input type="hidden" name="s_page" value="$s_page" />
 <input type="hidden" name="config" value="$s_config" />
 <input type="hidden" name="list"   value="$s_list" />
 <input type="hidden" name="order"  value="$s_order" />
@@ -129,7 +129,7 @@ function plugin_pages2csv_action()
   
   // $vars['refer'] : 当該のplugin を設置したページ
   // $vars['page']  : リスト表示するtrackerのページの格納場所
-  $page   = $vars['page'];
+  $r_page = $vars['s_page'];
   $config = $vars['config'];
   $list   = array_key_exists('list',$vars) ? $vars['list'] : 'list';
   $order  = array_key_exists('order',$vars) ? $vars['order'] : '_real:SORT_DESC';
@@ -145,7 +145,7 @@ function plugin_pages2csv_action()
   if (array_key_exists('refer',$vars) and is_pagename($vars['refer']))
   {
     check_editable($vars['refer']);
-    check_readable($page);
+    check_readable($r_page);
   }else{
     return array('msg'=>'page is not exist.');
   }
@@ -153,10 +153,11 @@ function plugin_pages2csv_action()
   $refer=$vars['refer'];
   $pass = array_key_exists('pass',$vars) ? md5($vars['pass']) : NULL;
   
+
   // テンポラリファイルへの出力
   $tempname = tempnam("","pages2csv_temp");
   $fp = fopen($tempname,"w");
-  $pstr = plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order,$limit);
+  $pstr = plugin_pages2csv_getcsvlist($r_page,$refer,$config,$list,$order,$limit,$filter);
   fwrite($fp,$pstr);
   fclose($fp);
 
@@ -207,14 +208,27 @@ function plugin_pages2csv_getcsvlist($page,$refer,$config_name,
 $list,$order='', $limit=NULL, $filter_name=NULL)
 {
   $config = new Config('plugin/tracker/'.$config_name);
-  if(!$config->read())
-    {
-      return "<p>config file	'". htmlspecialchars($config_name). "' is not exist.";
-    }
+  if(!$config->read()) {
+    return "<p>config file	'". htmlspecialchars($config_name). "' is not exist.";
+  }
   $config->config_name = $config_name;
 
+  if($filter_name != NULL) {
+    $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
+    
+    if(!$filter_config->read()) {
+      // filter の設定がなされていなければ、エラーログを返す
+      return "<p>config file '".htmlspecialchars($config->page.'filters')."' not found</p>";
+    }
+  }
+
   $list = &new Tracker_csvlist($page,$refer,$config,$list,$filter_name);
+  if($filter_name != NULL) {
+    $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
+    $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+  }
   $list->sort($order);
+  
   return $list->toString($limit);
 }
 
