@@ -4,8 +4,8 @@
 //
 // $Id: tracker.inc.php,v 1.27 2005/01/15 09:35:58 henoheno Exp $
 //
-// This script is modified by jjyun. (2004/02/22 - 2005/01/16) 
-//   tracker.inc.php-modified, v 1.2 2005/01/16 12:18:56 jjyun
+// This script is modified by jjyun. (2004/02/22 - 2005/01/22) 
+//   tracker.inc.php-modified, v 1.3 2005/01/16 19:25:52 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 // UpdateLog : スクリプトの最後に移動しました。
@@ -27,7 +27,10 @@ define('TRACKER_LIST_SHOW_ERROR_PAGE',TRUE);
 
 define('TRACKER_LIST_CACHE_DEFAULT', 0); 
 // define('TRACKER_LIST_CACHE_DEFAULT', 1); 
-// define('TRACKER_LIST_CACHE_DEFAULT', 2)); 
+// define('TRACKER_LIST_CACHE_DEFAULT', 2); 
+
+// tracker_list への 行番号の追加(TRUE:追加, FALSE:なし) 
+define('TRACKER_LIST_ADD_COLUMN_NUMBER',FALSE);
 
 function plugin_tracker_convert()
 {
@@ -734,7 +737,7 @@ class Tracker_list
 	var $rows;
 	var $order;
 	var $filter_name;
-  
+	
 	var $cache_level = array(
 			   'NO'  => 0, // キャッシュロジックを利用しない
 			   'LV1' => 1, // ページの読み込み処理に対するキャッシュを有効にする
@@ -996,11 +999,21 @@ class Tracker_list
 				$body[] = $line;
 			}
 		}
+
+		if ( TRACKER_LIST_ADD_COLUMN_NUMBER )
+		{
+			$lineno = 1;
+		}
+
 		foreach ($this->rows as $key=>$row)
 		{
 			if (!TRACKER_LIST_SHOW_ERROR_PAGE and !$row['_match'])
 			{
 				continue;
+			}
+			if ( TRACKER_LIST_ADD_COLUMN_NUMBER )
+			{
+				$row['_line'] = $lineno++;  
 			}
 			$this->items = $row;
 			foreach ($body as $line)
