@@ -2,9 +2,8 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.1 2004/01/27 07:43:02 jjyun Exp $
-
-// This script is based on listbox2.inc.php by KaWaZ
+// $Id: listbox3.inc.php,v 0.2 2004/02/01 04:26:02 jjyun Exp $
+//   This script is based on listbox2.inc.php by KaWaZ
 
 function plugin_listbox3_action() {
   global $vars, $post;
@@ -34,6 +33,15 @@ function plugin_listbox3_action() {
 
 function plugin_listbox3_convert()
 {
+  global $head_tags;
+
+  // <head> タグ内への <meta>宣言の追加
+  $meta_str =
+   " <meta http-equiv=\"content-script-type\" content=\"text/javascript\" /> ";
+  if(! in_array($meta_str, $head_tags) ){
+    $head_tags[] = $meta_str;
+  }
+
   $number = plugin_listbox3_getNumber();
   if(func_num_args() > 1)
     {
@@ -88,6 +96,7 @@ function plugin_listbox3_getOptions($value, $config_name, $field_name) {
   }
   $config->name = $config_name;
 
+  
   foreach($config->get($field_name) as $options) {
     $s_option=$options[0];
     if($s_option == '') {
