@@ -2,12 +2,19 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: linkvote.inc.php,v 0.2 2003/08/13 13:33:54 jjyun Exp $
-// based on vote2.inc.php, v 0.12 
-// 
-// vote2.inc.php, v 0.12 2003/10/05 17:55:04 sha 
-// based on vote.inc.php v1.14
-//
+// $Id: linkvote.inc.php,v 0.3 2004/09/20 00:30:24 jjyun Exp $
+/**
+ *  PukiWiki - link with used counter plugin
+ * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
+ *
+ * License     : It is same license as PukiWiki core, that is GPL.
+ * Update Logs : See the end of this file.
+ *
+ * Description :
+ *  &linkvote([vote2-option,...]],[link-title],[link-url],[bunner-path]);
+ * This script is create by jjyun, based on vote2.inc.php, v 0.12.
+ * 
+ */
 
 function plugin_linkvote_init()
 {
@@ -81,7 +88,8 @@ function plugin_linkvote_inline()
 	$str_nonumber    = $_linkvote_messages['arg_nonumber'];
 	$str_nolabel     = $_linkvote_messages['arg_nolabel'];
 	$str_notitle     = $_linkvote_messages['arg_notitle'];
-	$str_disturl;   
+	$str_disturl = '';   
+	$str_bunner = '';
 
 	$args = func_get_args();
 	array_pop($args); // {}内の要素の削除
@@ -115,6 +123,9 @@ function plugin_linkvote_inline()
 		else if ( preg_match('/^(http:|https:)\/\/(.*)$/',$opt,$match) ){
 		  $str_disturl = htmlspecialchars($match[0]);
 		}
+		else if ( preg_match('/(?:.*(\.png|\.gif|\.jpg))$/',$opt,$match) ){
+		  $str_bunner = htmlspecialchars($match[0]);
+		}
 		else if ( $arg == '' and preg_match("/^(.*)\[(\d+)\]$/",$opt,$match)){
 			$arg = $match[1];
 			$cnt = $match[2];
@@ -137,11 +148,24 @@ function plugin_linkvote_inline()
 	}
 	if ( $nolabel == FALSE ) {
 		$title = $notitle ? '' : "title=\"$f_vote_inno\"";
-//		return <<<EOD
-//<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest" $title>$link</a>$f_cnt
-		return <<<EOD
+		if( $str_bunner == '' ) {
+		  return <<<EOD
 <a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title>$link</a>$f_cnt
 EOD;
+		}
+		else {
+		  require_once(PLUGIN_DIR.'ref.inc.php');
+		  $ret_ref = plugin_ref_body(array($str_bunner,nolink));
+		  
+		  if (isset($ret_ref['_error']) && $ret_ref['_error'] != '' ) {
+		    return $_linkvote_messages['body_error'];
+		  }
+		  else {
+		    return <<<EOD
+<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title>{$ret_ref['_body']}</a>$f_cnt
+EOD;
+		  }
+		}
 	}
 	else {
 		return $f_cnt;
@@ -193,136 +217,6 @@ function plugin_linkvote_address($match, $vote_no, $page, $ndigest)
 	$f_vote_no = htmlspecialchars($npage . '=' . $vote_no);
 	return array($npage, $vote_no, $f_vote_no, $ndigest);
 }
-/* -------------------------------------------------------------------------------------
-function plugin_linkvote_convert()
-{
-	global $script,$vars,$digest, $_linkvote_messages;
-	global $_vote_plugin_choice, $_vote_plugin_votes, $digests;
-	static $numbers = array();
-	static $notitle = FALSE;
-	$str_notimestamp = $_linkvote_messages['arg_notimestamp'];
-	$str_nonumber    = $_linkvote_messages['arg_nonumber'];
-	$str_nolabel     = $_linkvote_messages['arg_nolabel'];
-	$str_notitle     = $_linkvote_messages['arg_notitle'];
-	
-	if (!array_key_exists($vars['page'],$numbers))
-	{
-		$numbers[$vars['page']] = 0;
-	}
-	$o_vote_no = $f_vote_no = $vote_no = $numbers[$vars['page']]++;
-	
-	if (!func_num_args())
-	{
-		return '';
-	}
-
-	$args = func_get_args();
-	$page = $vars['page'];
-
-	$ndigest = $digest;
-	$tdcnt = 0;
-	$body2 = '';
-	$nonumber = $nolabel = FALSE;
-	$options = array();
-	foreach($args as $arg)
-	{
-		$arg = trim($arg);
-		if ( $arg == $str_nonumber ){
-			$nonumber = TRUE;
-			continue;
-		}
-		else if ( $arg == $str_nolabel ){
-			$nolabel = TRUE;
-			continue;
-		}
-		else if ( $arg == $str_notitle ){
-			$notitle = TRUE;
-			continue;
-		}
-		$options[] = $arg;
-	}
-	foreach($options as $arg)
-	{
-		$cnt = 0;
-		if ( $arg == $str_notimestamp ){
-			continue;
-		}
-		else if ( preg_match('/^(.+(?==))=([+-]?\d+)([bir]?)$/',$arg,$match) ){
-			list($page,$vote_no,$f_vote_no,$ndigest) 
-				= plugin_linkvote_address($match,$vote_no,$page,$ndigest);
-			continue;
-		}
-		else if (preg_match("/^(.*)\[(\d+)\]$/",$arg,$match))
-		{
-			$arg = $match[1];
-			$cnt = $match[2];
-		}
-		$e_arg = encode($arg);
-		$f_cnf = '';
-		if ( $nonumber == FALSE ) {
-			$title = $notitle ? '' : "title=\"$o_vote_no\"";
-			$f_cnt = "<span $title>&nbsp;" . $cnt . "&nbsp;</span>";
-		}
-		$link = make_link($arg);
-		
-		switch ( $tdcnt++ % 3){
-			case 0: $cls = 'vote_td1'; break;
-			case 1: $cls = 'vote_td2'; break;
-			case 2: $cls = 'vote_td3'; break;
-		}
-		$cls = ($tdcnt++ % 2)  ? 'vote_td1' : 'vote_td2';
-	
-		if ( $nolabel == FALSE ){
-			$body2 .= <<<EOD
-  <tr>
-   <td align="left" class="$cls" style="padding-left:1em;padding-right:1em;">$link</td>
-   <td align="right" class="$cls">$f_cnt
-    <input type="submit" name="vote_$e_arg" value="$_vote_plugin_votes" class="submit" />
-   </td>
-  </tr>
-
-EOD;
-		}
-		else {
-			$body2 .= <<<EOD
-  <tr>
-   <td align="left" class="$cls" style="padding-left:1em;padding-right:1em;">$link</td>
-   <td align="right" class="$cls">$f_cnt
-   </td>
-  </tr>
-
-EOD;
-		}
-	}
-
-	$s_page    = htmlspecialchars($page);
-	$s_digest  = htmlspecialchars($ndigest);
-	$title = $notitle ? '' : "title=\"$f_vote_no\"";
-	$body = <<<EOD
-<form action="$script" method="post">
- <table cellspacing="0" cellpadding="2" class="style_table" summary="vote" $title>
-  <tr>
-   <td align="left" class="vote_label" style="padding-left:1em;padding-right:1em"><strong>$_vote_plugin_choice</strong>
-    <input type="hidden" name="plugin" value="linkvote" />
-    <input type="hidden" name="refer" value="$s_page" />
-    <input type="hidden" name="digest" value="$s_digest" />
-    <input type="hidden" name="vote_no" value="$vote_no" />
-   </td>
-   <td align="center" class="vote_label"><strong>$_vote_plugin_votes</strong></td>
-  </tr>
-
-EOD;
-
-	$body .= <<<EOD
-$body2
- </table>
-</form>
-
-EOD;
-	
-	return $body;
-}
------------------------------------------------------------------------------------- */
 
 function plugin_linkvote_action_inline($vote_no)
 {
@@ -529,4 +423,16 @@ function plugin_linkvote_action_block($vote_no)
 
 	return $retvars;
 }
+// -- linkvote.inc.php --
+// Update Logs - Modified by jjyun. (2004/02/22 - 2004/09/13)
+//  v0.3 2004/09/05 modified by jjyun.
+//    リンク先の表記として画像ファイルを指定できるようにする
+//  v0.2 2004/08/13 modified by jjyun.
+//    内部コードの修正($post,$get を用いている部分を削除)
+//  v0.1 2004/07/28 create by jjyun. based on vote2.inc.php, v 0.12 
+//
+// (vote2.inc.php より)
+//   vote2.inc.php, v 0.12 2003/10/05 17:55:04 sha 
+//   based on vote.inc.php v1.14
+//
 ?>
