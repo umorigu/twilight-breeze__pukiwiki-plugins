@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 0.7 2004/01/25 19:02:32 jjyun Exp $
+// $Id: datefield.inc.php,v 0.7.2 2004/07/25 16:23:22 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -157,14 +157,29 @@ function plugin_datefield_getDate($dateStr, $formatStr){
     "formatPtn" => $formatPtn,
     "dateArgs"  => $dateArgs,
     "parseStr"  => $parseStr );
-
+  
   return $date;
 }
 
+function plugin_datefield_getDateStrWithFormat($format_opt,$yyyy,$mm,$dd ){
+  $strWithFormat = $format_opt;
+  $yy = $yyyy%100;
 
-function plugin_datefield_convert() {
+  $mm += 1; // 引数の月の値の範囲 month is 0 - 11
+  if ($yy < 10) $yy = "0" . $yy;
+  if ($mm < 10) $mm = "0" . $mm;
+  if ($dd < 10) $dd = "0" . $dd;
+  $strWithFormat = preg_replace('/YYYY/i', $yyyy, $strWithFormat);
+  $strWithFormat = preg_replace('/YY/i',   $yy,   $strWithFormat);
+  $strWithFormat = preg_replace('/MM/i',   $mm,   $strWithFormat);
+  $strWithFormat = preg_replace('/DD/i',   $dd,   $strWithFormat);
+  return $strWithFormat;
+}
+
+// Javasciptを用いること、<form>タグにname属性を用いることを通知する
+function plugin_datefield_headDeclaration() {
   global $html_transitional, $head_tags;
-
+  
   // XHTML 1.0 Transitional
   $html_transitional = TRUE;
 
@@ -174,7 +189,14 @@ function plugin_datefield_convert() {
   if(! in_array($meta_str, $head_tags) ){
     $head_tags[] = $meta_str;
   }
+}
 
+
+function plugin_datefield_convert() {
+
+  // Javasciptを用いること、<form>タグにname属性を用いることを通知する
+  plugin_datefield_headDeclaration();
+  
   // datefield プラグインの部分のHTML出力
   $number = plugin_datefield_getNumber();
   if(func_num_args() > 0) 
@@ -200,6 +222,17 @@ function plugin_datefield_getNumber() {
   return $numbers[$vars['page']]++;
 }
 
+function plugin_datefield_formFormat($format_opt) {
+  $format_str= trim($format_opt);
+  if(strlen($format_str) == 0 )  $format_str = 'YYYY/MM/DD';
+  if(preg_match('/^[\'\"].*[\"\']$/',$format_str)){ /* " */
+    $format_str = '\'' . substr($format_str,1,strlen($format_str)-2) . '\'';
+  }else{
+    $format_str = '\'' . $format_str . '\'';
+  }
+  
+  return $format_str;
+}
 
 function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
   global $script, $vars;
@@ -211,13 +244,7 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
   $body = ($number == 0) ? plugin_datefield_getScript() : '';
 
   // 日付書式指定文字列に対する処理
-  $format_opt= trim($format_opt);
-  if(strlen($format_opt) == 0 )  $format_opt = 'YYYY/MM/DD';
-  if(preg_match('/^[\'\"].*[\"\']$/',$format_opt)){ /* " */
-    $format_opt = '\'' . substr($format_opt,1,strlen($format_opt)-2) . '\'';
-  }else{
-    $format_opt = '\'' . $format_opt . '\'';
-  }
+  $format_opt= plugin_datefield_formFormat($format_opt);
   
   // カレンダー表示設定に対する処理
   if($caldsp_opt != 'CUR') $caldsp_opt = 'REL';
@@ -247,14 +274,13 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
     onchange="this.form.submit();" />
     <input type="button" value="…"
     onclick="dspCalendar(this.form.infield, event, $format_opt, 0,
-     {$date['year']},{$date['month']}-1,{$date['day']} );" />
+     {$date['year']},{$date['month']}-1,{$date['day']},1 );" />
       <input type="hidden" name="refer" value="$page_enc" />
       <input type="hidden" name="plugin" value="datefield" />
       <input type="hidden" name="number" value="$number" />
     </div>
     </form>
 EOD;
-
   return $body;
 }
 

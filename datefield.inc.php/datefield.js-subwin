@@ -1,5 +1,5 @@
 /* *******************************************************************
- * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.7
+ * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.7.2
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -61,7 +61,7 @@ dspCalendar.headHTML =
 
 // 注意: stdMonth は 1月が0、... 12月は11 で指定すること
 function dspCalendar(obj, event, dateFormatType, diffMonth,
-	 	 stdYear,stdMonth,stdDay){
+	 	 stdYear,stdMonth,stdDay,doSubmit){
   
   if(dspCalendar.obj == ""){
     dspCalendar.obj = obj;
@@ -89,6 +89,12 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
   else this.stdmonth = stdMonth;
   if(!arguments[6])this.stdday   = this.nowday;
   else this.stdday   = stdDay;
+
+  // カレンダーでの変更の即時反映の有無(default: 即時反映)
+  if(!arguments[7])this.doSubmit = 0;
+  else if(doSubmit == 1) this.doSubmit = 1;
+  else this.doSubmit = 0;
+
   var cldrDate =
    new Date(this.stdyear, this.stdmonth + this.diffMonth , 1);
 
@@ -123,25 +129,21 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
     + '<b>'+ dspCalendar.dateFormatType 
     + '</b>\n </td>\n </tr>\n'
     + '<tr>\n '
-    + '  <td colspan="7" align="center" class="datefield-footer">\n'
-    + '<input type="button" value="now"'
-    + ' onclick="self.opener.dspCalendar(self.opener.document.' //"
-    +  obj.form.name + '.' + obj.name  + ' ,null, '
-    + dspCalendar.dateFormatType + ', '
-    + ( 12*(this.nowyear  - this.stdyear)
-          + (this.nowmonth - this.stdmonth)
-          -  this.diffMonth )
-    + ', ' + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
-    + ')" />\n' //"
-    + '<input type="button" value="reset"'
-    + ' onclick="self.opener.dspCalendar(self.opener.document.' //"
-    +  obj.form.name + '.' + obj.name  + ' ,null, '
-    + dspCalendar.dateFormatType + ', ' + (-1 * this.diffMonth)
-    + ', ' + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
-    + ')" />\n'; //"
+    + '  <td colspan="7" align="center" class="datefield-footer">\n';
 
-   footHTML += '\n</table>\n\n</div> \n </body>\n </html>\n';
-   dspCalendar.footHTML = footHTML;
+  var skip_mm;
+  // now button
+  skip_mm = ( -12*(this.stdyear - this.nowyear)
+              -   (this.stdmonth - this.nowmonth)
+              - this.diffMonth );
+  footHTML += getCallCalendarScript(obj, this, "now",skip_mm);
+
+  // reset button
+  skip_mm = -1 * this.diffMonth;
+  footHTML += getCallCalendarScript(obj, this, "reset",skip_mm);
+
+  footHTML += '\n</table>\n\n</div> \n </body>\n </html>\n';
+  dspCalendar.footHTML = footHTML;
 
   // カレンダー表示月情報の取得とタイトルの作成
   var dspYYYY = cldrDate.getFullYear();
@@ -155,22 +157,17 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
 
   // カレンダー構築用HTML(動的変更部分): Month
   cldrHTML += '<tr class="datefield-month" > \n'
-   + '<th colspan="7" align="center">\n'
-   + '<input type="button" value="&lt;&lt;"'
-   + ' onclick="self.opener.dspCalendar(self.opener.document.'
-   +  obj.form.name + '.' + obj.name 
-   + ' ,null, ' + dspCalendar.dateFormatType + ', -1, '
-   + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
-   + ')" />\n'
-   + titleDspMonth + '\n'
-   + '<input type="button" value="&gt;&gt;"'
-   + ' onclick="self.opener.dspCalendar(self.opener.document.'
-   +  obj.form.name + '.' + obj.name 
-   + ' ,null, ' + dspCalendar.dateFormatType + ', 1, '
-   + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday
-   + ');" />\n'
-   + ' </th>\n'
-   + '</tr>\n';
+   + '<th colspan="7" align="center">\n';
+
+  // 先月へのボタン表示
+  cldrHTML += getCallCalendarScript(obj,this,"&lt;&lt;", -1);
+
+  cldrHTML += titleDspMonth + '\n';
+
+  // 次月へのボタン表示
+  cldrHTML += getCallCalendarScript(obj,this,"&gt;&gt;", 1);
+
+  cldrHTML += ' </th>\n</tr>\n';
 
   // カレンダー構築用HTML(動的変更部分) : Week
   cldrHTML += ' <tr> \n';
@@ -214,14 +211,17 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
             cldrHTML += '  <td class="datefield-diffmonth" >\n';
        }
 
-       cldrHTML += '<a href="javascript:function v(){ ';
-       cldrHTML += "self.opener.document.";
-       cldrHTML += obj.form.name + "." + obj.name;
-       cldrHTML += '.value=(';
-       cldrHTML += dateWithFormat(wrtYYYY, wrtMM, wrtDD );
-       cldrHTML += '); self.opener.document.' + obj.form.name + '.submit();';
-       cldrHTML += 'self.close()};v()" >\n';
-       cldrHTML += wrtDD + '</a> </td>\n';
+       cldrHTML += '<a href="javascript:function v(){ '
+       	 + "self.opener.document." + obj.form.name + "." + obj.name
+       	 + '.value=('
+       	 + dateWithFormat(wrtYYYY, wrtMM, wrtDD ) + ');';
+
+       if(this.doSubmit == 1){
+         cldrHTML += 'self.opener.document.' + obj.form.name + '.submit();';
+       }
+
+       cldrHTML += 'self.close()};v()" >\n'
+       	 += wrtDD + '</a> </td>\n';
     }
     cldrHTML += '</tr>\n';
   }
@@ -261,6 +261,24 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
      
      return strWithFormat;
   }
+
+ /********************************************************************
+ * カレンダーを呼び出す<input>フィールド文字列の作成
+ *  Syntax : getCallCalendarScript(rObj, rThis, tags, diff)
+ *  例     : getCallCalendarScript(obj, this , "now" , -1 )
+ * ------------------------------------------------------------------
+ */
+function getCallCalendarScript(rObj,rThis, tags, diff){
+  var strRtn;
+  strRtn = '<input type="button" value="' + tags + '"'
+   + ' onclick="dspCalendar(window.document.'
+   +  rObj.form.name + '.' + rObj.name  + ' ,null, '
+   + rThis.dateFormatType + ', ' + diff
+   + ', ' + rThis.stdyear + ', ' + rThis.stdmonth + ', ' + rThis.stdday
+   + ', ' + rThis.doSubmit + ');" />\n';
+   return strRtn;
+}
+
 
 
  /********************************************************************
