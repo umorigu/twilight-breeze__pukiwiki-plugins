@@ -6,7 +6,7 @@
 //   This script is based on listbox2.inc.php by KaWaZ
 
 function plugin_listbox3_action() {
-  global $vars;
+  global $script, $vars;
   check_editable($vars['refer'], true, true);
 
   $number = 0;
@@ -30,6 +30,10 @@ function plugin_listbox3_action() {
     $pagedata .= $line;
   }
   page_write($vars['refer'], $pagedata);
+  if( $pagedata != '' ) {
+    header("Location: $script?".rawurlencode($vars['refer'])."#listbox3_no_".$vars['number']);
+    exit;
+  }
   return array('msg' => '', 'body' => '');
 }
 
@@ -73,6 +77,7 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname) {
   $options_html = plugin_listbox3_getOptions($value, $template, $fieldname);
   $body = <<<EOD
     <form action="$script_enc" method="post" style="margin:0;"> 
+    <a id="listbox3_no_$number">
     <div>
     <select name="value" style="vertical-align:middle;" onchange="this.form.submit();">
     $options_html
@@ -81,6 +86,7 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname) {
     <input type="hidden" name="plugin" value="listbox3" />
     <input type="hidden" name="refer" value="$page_enc" />
     </div>
+    </a>
     </form>
 EOD;
   //$body = preg_replace("/\s+</", '<', $body);
