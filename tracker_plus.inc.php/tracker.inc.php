@@ -1085,7 +1085,7 @@ class Tracker_list
 		// This confirm whether config files were changed or not. 
 		$cache_time = filemtime($cachefile) - LOCALZONE;
 		if( ( get_filetime($this->config->page) > $cache_time) 
-		    or ( get_filetime($this->config->page . $this->list) > $cache_time ) )
+		    or ( get_filetime($this->config->page . '/' .  $this->list) > $cache_time ) )
 		{
 			return ;
 		}
