@@ -272,7 +272,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 	}
 
 	// テンポラリファイルへの出力
-	if( ! ( $tempname = tempnam("","pages2csv_temp") ) || 
+	if( ! ( $tempname = tempnam( UPLOAD_DIR ,"pages2csv_temp") ) || 
 	    ! ( $fp = fopen($tempname,"w") ) )
 	{
 		return array('result'=>FALSE,'msg'=>$_pages2csv_messages['err_create_tmpfile']);
