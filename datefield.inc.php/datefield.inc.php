@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 1.0 2004/12/31 10:15:42 jjyun Exp $
+// $Id: datefield.inc.php,v 1.1 2005/03/27 11:45:42 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -179,6 +179,7 @@ function plugin_datefield_getDate($dateStr, $formatStr){
     $parseStr = "sscanf(\"$scanStr\" $formatPtn $dateArgs);";
     eval($parseStr);
   }
+  if( $year < 100 && $year > 0) $year += 2000;
   $date = array(
     "year"      => $year,
     "month"     => $month,
@@ -247,7 +248,7 @@ function plugin_datefield_formFormat($format_opt) {
   return $format_str;
 }
 
-function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
+function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt = '') {
   global $script, $vars;
 
   $page_enc = htmlspecialchars($vars['page']);

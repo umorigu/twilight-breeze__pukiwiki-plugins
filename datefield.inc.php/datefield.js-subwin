@@ -57,7 +57,7 @@ dspCalendar.headHTML =
   + '  type="text/css" media="screen" charset="shift_jis" /> \n'
   + ' </head>\n <body class="datefield">\n'
   + ' <div style="text-align: center;"> \n'
-  + ' <script type="text/javascript" src="skin/datefieldw.js" ></script>\n'
+  + ' <script type="text/javascript" src="skin/datefield.js" ></script>\n'
   + ' <table border="0" width="140" class="datefield" > \n';
 
 
@@ -76,9 +76,9 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
   this.nowdate  = this.now.getDate(); 
 
   if(!arguments[2]){
-    dspCalendar.dateFormatType = '\'YYYY/MM/DD\'';
+    this.dateFormatType = '\'YYYY/MM/DD\'';
   } else {
-    dspCalendar.dateFormatType = '\''+ dateFormatType + '\'';
+    this.dateFormatType = '\''+ dateFormatType + '\'';
   }
   if(isNaN(this.diffMonth))this.diffMonth = 0;
   if(!arguments[3])diffMonth = 0;
@@ -131,7 +131,7 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
   /*
   var footHTML = '<tr>\n'
     + '  <td colspan="7" align="center" class="datefield-footer">\n'
-    + '<b>'+ dspCalendar.dateFormatType 
+    + '<b>'+ this.dateFormatType 
     + '</b>\n </td>\n </tr>\n'
     + '<tr>\n '
     + '  <td colspan="7" align="center" class="datefield-footer">\n';
@@ -143,14 +143,14 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
     + '<a href="javascript:function v(){ '
     + "self.opener.document." + obj.form.name + "." + obj.name
     + '.value=('
-    + dateWithFormat(this.nowyear, this.nowmonth, this.nowdate ) + ');';
+    + dateWithFormat(this.dateFormatType, this.nowyear, this.nowmonth, this.nowdate ) + ');';
 
   if(this.doSubmit == 1){
     footHTML += 'self.opener.document.' + obj.form.name + '.submit();';
   }
 
   footHTML += 'self.close()};v()" >\n'
-    + dateWithFormat(this.nowyear, this.nowmonth, this.nowdate ) + '</a> </b>\n </td>\n </tr>\n'
+    + dateWithFormat(this.dateFormatType, this.nowyear, this.nowmonth, this.nowdate ) + '</a> </b>\n </td>\n </tr>\n'
     + '<tr>\n '
     + '  <td colspan="7" align="center" class="datefield-footer">\n';
 
@@ -237,7 +237,7 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
        cldrHTML += '<a href="javascript:function v(){ '
        	 + "self.opener.document." + obj.form.name + "." + obj.name
        	 + '.value=('
-       	 + dateWithFormat(wrtYYYY, wrtMM, wrtDD ) + ');';
+       	 + dateWithFormat(this.dateFormatType, wrtYYYY, wrtMM, wrtDD ) + ');';
 
        if(this.doSubmit == 1){
          cldrHTML += 'self.opener.document.' + obj.form.name + '.submit();';
@@ -265,13 +265,12 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
 
  /********************************************************************
   * 指定形式に沿った日付文字列の作成
-  *  Syntax : dateWithFormat(wrtYYYY , wrtMM , wrtDD )
+  *  Syntax : dateWithFormat(dateFormatType, wrtYYYY , wrtMM , wrtDD )
   *  例     : dateWithFormat('YYYY/MM/DD', 2003 , 10 , 3 )
-  *  注意   : Global変数である dspCalendarが設定されていること
   * ------------------------------------------------------------------
   */
- function dateWithFormat(wrtYYYY , wrtMM , wrtDD ){
-     var strWithFormat = "" + dspCalendar.dateFormatType;
+ function dateWithFormat(dateFormatType, wrtYYYY, wrtMM, wrtDD){
+     var strWithFormat = "" + dateFormatType;
      var wrtYY = wrtYYYY%100;
      wrtMM += 1;
      if (wrtYY < 10) { wrtYY = "0" + wrtYY; }
