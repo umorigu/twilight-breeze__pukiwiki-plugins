@@ -3,11 +3,10 @@
 // $Id: tracker.inc.php,v 1.28 2005/01/23 08:29:20 henoheno Exp $
 //
 // Issue tracker plugin (See Also bugtrack plugin)
-// This script is modified by jjyun. (2004/02/22 - 2005/01/22) 
-//   tracker.inc.php-modified, v 1.3 2005/01/22 19:25:52 jjyun
+// This script is modified by jjyun. (2004/02/22 - 2005/02/08) 
+//   tracker.inc.php-modified, v 1.4 2005/02/08 00:27:52 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
-// UpdateLog : スクリプトの最後に移動しました。
 
 // tracker_listで表示しないページ名(正規表現で)
 // 'SubMenu'ページ および '/'を含むページを除外する
@@ -1715,82 +1714,4 @@ class Tracker_field_string_utility {
 		return $str;
 	}
 }
-
-
-// Update Logs - Modified by jjyun. (2004/10/16 - 2005/01/02) 
-//
-// pending... 
-//  - isset() is faster than array_key_exists().
-//     see... [[dev:開発日記/2004-06-30]] 変更すべきだろうか？
-//
-// ** differences between 1.1 and 1.2 **
-//  - cache機能の不具合の修正
-//  - datefield plugin との結び付きをなくすため、呼び出していた
-//     datefield.inc.php の関数をTracker_field_datefield 内にコピーする。
-//  - datefield 形式での初期値の表示において、日にちが1桁の場合に、
-//     3桁で表示される不具合を対処
-//  - pages2csv.inc.php から utility function を取り込み、改良する
-//  - hidden3 形式の追加
-//    （hidden2 と同機能だが、sort形式が NUMERIC,
-//      プラグインの引数指定がある場合には、対象文字列から数値を抜き出す )
-//  - 内部コードの clean up
-// 
-// ** differences between 1.0 and 1.1 **
-//  - Ver.1.0 で行った '/' のescape ロジック混入したフィルターの不具合を修正
-//  - tracker_list をもっと高速に表示させるために、cacheの利用を採用します
-//    [[dev:BugTrack/560]]のぱんださんのパッチとの違い
-//     - 各ページのparse時に対する処理のcache(CACHE_LV1)では、
-//        一覧表示の項目のみを書き出し、list設定毎のcacheとします
-//     - Config ページの変更も確認します
-//     - htmlへの変換後のデータも利用可能であれば適用します(CACHE_LV2)
-//     - cacheを適用しない場合や、コマンドでの明示的な指示により、
-//        cacheファイルの削除が可能です。
-//    
-//   (Ver.1.0.6)
-//    - Ver.1.0 で行った '/' をescape するロジックにて
-//       Tracker_list_filterConditionに入れてしまった不具合を修正
-//   (Ver 1.0.5)
-//    - Lv2.cache の削除タイミングを修正する
-//   (Ver 1.0.4)
-//    - csv_implode(), csv_explode() の使用をとりやめる
-//       (csv_explode() の解析でtimeoutが生じるため)
-//   (Ver 1.0.3)
-//    - [[dev:BugTrack/560]]のぱんださんのパッチを元に
-//        cacheの取り扱うロジックを全面的に見直す
-//   (Ver 1.0.2)
-//    - コマンドプラグインとして、tracker cache ファイル全削除指定 の追加
-//    - cache 引数を追加し、cache levelの指定, verboseモードが可能なように変更
-//   (Ver 1.0.1)
-//    - ページの追加/更新/削除の対象を検知し、一覧の内容を書き換えるメソッドを追加する
-//
-// Update Logs - Modified by jjyun. (2004/02/22 - 2004/10/02) 
-//
-// ** differences between 0.9 and 1.0 **
-//      (Ver 0.9.1) modified Tracker_field_hidden2
-//      If return type from format_value() is array, return top element.
-//      (Ver 0.9.2) modified Tracker_list_filter, Tracker_list_condition
-//      change Tracker_list_condition class's name 
-//        from Tracker_list_condition to Tracker_list_filterCondition )
-//      modified Tracker_field_filterCondition
-//        to be able to treat property-string with '/'. 
-//
-// ** differences between 0.8 and 0.9 **
-//     (Ver 0.8.4) modified Tracker_field_hidden2,datefield
-//      hidden2   -> The mistake of specification of an argument of
-//                    Tracker_field_strUtil::getArg_from_BlockTPluginStr() is corrected.
-//      datefield -> The fault of the processing to check values in config page is corrected.
-//     (Ver 0.8.3) modified Tracker_field_select2,hidden2,datefield
-//      The acquisition method of block-plugin arguments is changed.
-//      select2 -> The method of a character judging is changed. (Specification change)
-//     (Ver 0.8.2) modified Tracker_field_select2,Tracker_field_hidden2
-//       to be able to treat property-string with '/'. 
-//
-// ** differences between 0.7 and 0.8 **
-//   This script is modified by jjyun. (2004/02/22 - 2004/08/09)
-//    tracker.inc.php-modified, v 0.8 2004/08/09 13:17:12 jjyun
-//     add Tracker_field_select2   class,
-//     add Tracker_field_hidden2   class,
-//     add Tracker_field_datefield class,
-//     add filter logics
-//      ... and modified associated parts.
 ?>
