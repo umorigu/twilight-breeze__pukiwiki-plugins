@@ -1,9 +1,8 @@
 <?php
-/////////////////////////////////////////////////
-// PukiWiki - Yet another WikiWikiWeb clone.
+// PukiWiki - Yet another WikiWikiWeb clone
+// $Id: tracker.inc.php,v 1.28 2005/01/23 08:29:20 henoheno Exp $
 //
-// $Id: tracker.inc.php,v 1.27 2005/01/15 09:35:58 henoheno Exp $
-//
+// Issue tracker plugin (See Also bugtrack plugin)
 // This script is modified by jjyun. (2004/02/22 - 2005/01/22) 
 //   tracker.inc.php-modified, v 1.3 2005/01/22 19:25:52 jjyun
 //
@@ -32,6 +31,8 @@ define('TRACKER_LIST_CACHE_DEFAULT', 0);
 function plugin_tracker_convert()
 {
 	global $script,$vars;
+
+	if (PKWK_READONLY) return ''; // Show nothing
 
 	$base = $refer = $vars['page'];
 
@@ -132,6 +133,8 @@ function plugin_tracker_getNumber() {
 function plugin_tracker_action()
 {
 	global $post, $vars, $now;
+
+	if (PKWK_READONLY) die_message('PKWK_READONLY prohibits editing');
 
 	$config_name = array_key_exists('_config',$post) ? $post['_config'] : '';
 
@@ -238,6 +241,8 @@ function plugin_tracker_action()
 function plugin_tracker_inline()
 {
 	global $vars;
+
+	if (PKWK_READONLY) return ''; // Show nothing
 
 	$args = func_get_args();
 	if (count($args) < 3)
@@ -1108,7 +1113,8 @@ class Tracker_list
 			foreach($arr as $key => $value)
 			{
 				$column_name = $column_names[$key];
-				if( isset($this->fields[$column_name]) )
+				// '_match' is not fields , but this value is effect for tracker_list.
+				if( isset($this->fields[$column_name]) || $column_name =='_match')
 				{
 					$row[$column_name] = stripslashes($value);
 				}
@@ -1175,7 +1181,7 @@ class Tracker_list
 		}
                 // add default parameter
                 $column_names = array_merge($column_names,
-					    array('_page','_refer','_real','_update'));
+					    array('_page','_refer','_real','_update','_match'));
                 $column_names = array_unique($column_names);
 
 		fputs($fp, "\"" . implode('","', $column_names)."\"\n");
