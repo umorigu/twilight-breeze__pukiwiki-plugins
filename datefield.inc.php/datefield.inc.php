@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 0.7.2 2004/07/25 16:23:22 jjyun Exp $
+// $Id: datefield.inc.php,v 0.8 2004/08/09 14:54:22 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -19,13 +19,13 @@
  */ 
 
 function plugin_datefield_action() {
-  global $vars, $post;
+  global $vars;
   global $html_transitional;
-  check_editable($post['refer'], true, true);
+  check_editable($vars['refer'], true, true);
 
   $number = 0;
   $pagedata = '';
-  $pagedata_old  = get_source($post['refer']);
+  $pagedata_old  = get_source($vars['refer']);
 
   foreach($pagedata_old as $line) {
     if (!preg_match('/^(?:\/\/| )/', $line)) {
@@ -36,15 +36,15 @@ function plugin_datefield_action() {
 	
   	foreach($matches as $i => $match) {
   	  $opt = $match[1];
-  	  if ($post['number'] == $number++) {
+  	  if ($vars['number'] == $number++) {
   	    //ターゲットのプラグイン部分
 	    $para_array=preg_split('/,/',$opt);
-	    $errmsg = plugin_datefield_chkFormat($post['infield'],$para_array[1]);
+	    $errmsg = plugin_datefield_chkFormat($vars['infield'],$para_array[1]);
 	    if(strlen($errmsg)>0){
-		plugin_datefield_outputErrMsg($post['refer'], $errmsg);
+		plugin_datefield_outputErrMsg($vars['refer'], $errmsg);
 	    }	    
 	    
-  	    $opt = preg_replace('/[^,]*/', $post['infield'], $opt, 1);
+  	    $opt = preg_replace('/[^,]*/', $vars['infield'], $opt, 1);
   	  }
   	  $line .= "#datefield($opt)" . $paddata[$i+1];
   	}
@@ -53,7 +53,7 @@ function plugin_datefield_action() {
     $pagedata .= $line;
   }
 
-  page_write($post['refer'], $pagedata); 
+  page_write($vars['refer'], $pagedata); 
   return array('msg' => '', 'body' => '');
 }
 
@@ -288,9 +288,7 @@ function plugin_datefield_getScript() {
   global $script, $vars;
   $page_enc = htmlspecialchars($vars['page']);
   $script_enc = htmlspecialchars($script);
-  $js = <<<EOD
-    <script type="text/javascript" src="skin/datefield.js" ></script>
-EOD;
+  $js = '<script type="text/javascript" src="'. SKIN_DIR . 'datefield.js" ></script>';
   return $js;
 }
 ?>
