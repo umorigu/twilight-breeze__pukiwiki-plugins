@@ -81,15 +81,15 @@ function plugin_tracker_convert()
 	foreach (array_keys($fields) as $name)
 	{
 	        if (is_a($fields[$name],'Tracker_field_datefield')) {
-		  // 適切なバージョンのスクリプトの存在を確認する
-		  if (!exist_plugin('datefield')
-		      or !function_exists('plugin_datefield_getDateStrWithFormat')
-		      or !function_exists('plugin_datefield_formFormat')
-		      or !function_exists('plugin_datefield_headDeclaration') )
-   	          {
-		    return '<p>datefield.inc.php not found or not correct version.</p>';
-		  }
-		  $isDatefield = TRUE;
+			// 適切なバージョンのスクリプトの存在を確認する
+			if (!exist_plugin('datefield')
+			    or !function_exists('plugin_datefield_getDateStrWithFormat')
+			    or !function_exists('plugin_datefield_formFormat')
+			    or !function_exists('plugin_datefield_headDeclaration') )
+			{
+				return '<p>datefield.inc.php not found or not correct version.</p>';
+			}
+			$isDatefield = TRUE;
 		}
 
 		$replace = $fields[$name]->get_tag();
@@ -101,17 +101,19 @@ function plugin_tracker_convert()
 		$retval = str_replace("[$name]",$replace,$retval);
 	}
 
-	if($isDatefield == TRUE) {
-	  require_once(PLUGIN_DIR.'datefield.inc.php');
-	  plugin_datefield_headDeclaration();
-	  $number = plugin_tracker_getNumber();
-	  $form_scp = '<script type="text/javascript" src="' . SKIN_DIR . 'datefield.js"></script>';
-	  $form_scp .= <<<FORMSTR
+	if($isDatefield == TRUE)
+	{
+		require_once(PLUGIN_DIR.'datefield.inc.php');
+		plugin_datefield_headDeclaration();
+		$number = plugin_tracker_getNumber();
+		$form_scp = '<script type="text/javascript" src="' . SKIN_DIR . 'datefield.js"></script>';
+		$form_scp .= <<<FORMSTR
 <form enctype="multipart/form-data" action="$script" method="post" name="tracker$number" >
 FORMSTR;
 	}
-	else {
-	  $form_scp = <<<FORMSTR
+	else
+	{
+		$form_scp = <<<FORMSTR
 <form enctype="multipart/form-data" action="$script" method="post" >
 FORMSTR;
 	}
@@ -127,13 +129,13 @@ EOD;
 }
 
 function plugin_tracker_getNumber() {
-  global $vars;
-  static $numbers = array();
-  if (!array_key_exists($vars['page'],$numbers))
-    {
-      $numbers[$vars['page']] = 0;
-    }
-  return $numbers[$vars['page']]++;
+	global $vars;
+	static $numbers = array();
+	if (!array_key_exists($vars['page'],$numbers))
+	{
+		$numbers[$vars['page']] = 0;
+	}
+	return $numbers[$vars['page']]++;
 }
 
 function plugin_tracker_action()
@@ -714,14 +716,15 @@ function plugin_tracker_getlist($page,$refer,$config_name,$list,$order='',$limit
 		        // filterの設定がなされていなければ, エラーログを返す
 		        return "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>";
 		}
+	        $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
 	}
+	unset($filter_config);
 
 	// $list 変数が別の意味で使いまわされているので注意!! (jjyun's comment)
 	$list = &new Tracker_list($page,$refer,$config,$list,$filter_name,$cache);
 
 	if($filter_name != NULL)
 	{
-	        $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
 		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
 	}
 	$list->sort($order);
@@ -1063,9 +1066,9 @@ class Tracker_list
 		{
 			$status = '<div style="text-align: right; font-size: x-small;" > '
 			  . "cache level = {$this->cache['level']}, "
-			  . "Leve1.cache hit rate = "
+			  . "Level1.cache hit rate = "
 			  . "{$this->cache['state']['hits']}/{$this->cache['state']['total']} "
-			  . "Leve2.cache is = ";
+			  . "Level2.cache is = ";
 
 			if( $this->cache['state']['cnvrt'] )
 			{
@@ -1311,13 +1314,11 @@ function plugin_tracker_get_source($page)
 class Tracker_list_filter
 {
 	var $filter_name;
-	var $filter_config;
 	var $filter_conditions = array();
   
 	function Tracker_list_filter($filter_config, $filter_name)
 	{
 		$this->filter_name = $filter_name;
-		$this->filter_config = $filter_config;
 		foreach( $filter_config->get($filter_name) as $filter )
 		{
 			array_push( $this->filter_conditions,
@@ -1541,8 +1542,8 @@ class Tracker_field_datefield extends Tracker_field
 		$s_value = htmlspecialchars($this->default_value);
 		
 		$s_year  = date("Y",time());
-		$s_month = date("m",time());
-		$s_date  = date("d",time());
+		$s_month = date("n",time()); // ここでは先頭に0を付けない
+		$s_date  = date("j",time()); // ここでは先頭に0を付けない
 		
 		require_once( PLUGIN_DIR . 'datefield.inc.php');
 		// デフォルト値を現在の日付にする
