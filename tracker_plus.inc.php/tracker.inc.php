@@ -29,9 +29,6 @@ define('TRACKER_LIST_CACHE_DEFAULT', 0);
 // define('TRACKER_LIST_CACHE_DEFAULT', 1); 
 // define('TRACKER_LIST_CACHE_DEFAULT', 2); 
 
-// tracker_list への 行番号の追加(TRUE:追加, FALSE:なし) 
-define('TRACKER_LIST_ADD_COLUMN_NUMBER',FALSE);
-
 function plugin_tracker_convert()
 {
 	global $script,$vars;
@@ -1000,21 +997,15 @@ class Tracker_list
 			}
 		}
 
-		if ( TRACKER_LIST_ADD_COLUMN_NUMBER )
-		{
-			$lineno = 1;
-		}
-
+		$lineno = 1;
 		foreach ($this->rows as $key=>$row)
 		{
 			if (!TRACKER_LIST_SHOW_ERROR_PAGE and !$row['_match'])
 			{
 				continue;
 			}
-			if ( TRACKER_LIST_ADD_COLUMN_NUMBER )
-			{
-				$row['_line'] = $lineno++;  
-			}
+
+			$row['_line'] = $lineno++;  
 			$this->items = $row;
 			foreach ($body as $line)
 			{
