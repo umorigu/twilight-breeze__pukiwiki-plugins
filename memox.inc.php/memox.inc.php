@@ -1,5 +1,5 @@
 <?php
-// $Id: memox.inc.php,v 0.2 2004/08/28 23:59:41 jjyun Exp $
+// $Id: memox.inc.php,v 0.3 2004/09/03 01:03:21 jjyun Exp $
 //  this script based .. memo.inc.php,v 1.11 2004/07/24 14:58:41 henoheno Exp $
 
 /////////////////////////////////////////////////
@@ -29,18 +29,25 @@ function plugin_memox_action()
 	$memox_no = 0;
 	foreach($postdata_old as $line)
 	{
-		if (preg_match("/^#memox\(?.*\)?$/", $line))
-		{
-			if ($memox_no == $vars['memox_no'])
-			{
-				$postdata .= "#memox($s_cols,$s_rows,$memo_body)\n";
-				$line = '';
-			}
-			++$memox_no;
-		}
-		$postdata .= $line;
-	}
+	  if(preg_match('/^(?:\/\/| )/', $line)) // Skip Comment lines 
+	    continue;  
 
+	  if(preg_match_all('/(?:#memox\(([^\)]*)\))/', $line,$matches, PREG_SET_ORDER))
+	  {
+	    $paddata = preg_split('/#memox\(([^\)]*)\)/', $line);
+	    $line = $paddata[0];
+	    foreach($matches as $i => $match) 
+	    {
+	      $opt = $match[1];
+	      if ($memox_no++ == $vars['memox_no'])
+	      {
+		$opt = "$s_cols,$s_rows,$memo_body";
+	      }
+	      $line .= "#memox($opt)" . $paddata[$i+1];
+	    }
+	  }
+	  $postdata .= $line;
+	}
 	$postdata_input = "$memo_body\n";
 
 	if (md5(@join('', get_source($vars['refer']))) != $vars['digest'])
@@ -69,6 +76,7 @@ EOD;
 
 		$title = $_title_updated;
 	}
+
 	$retvars['msg'] = $title;
 	$retvars['body'] = $body;
 
@@ -104,7 +112,7 @@ function plugin_memox_convert()
 	$s_digest = htmlspecialchars($digest);
 
 	$string = <<<EOD
-<form action="$script" method="post" class="memo">
+<form action="$script" method="post" class="memo" style="margin:0;"> 
  <div>
   <input type="hidden" name="memox_no" value="$memox_no" />
   <input type="hidden" name="refer"   value="$s_page" />
