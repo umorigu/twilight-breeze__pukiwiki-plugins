@@ -5,6 +5,10 @@
 // $Id: listbox3.inc.php,v 0.5 2004/08/13 11:48:02 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
+// 修正後のリロード時に、編集箇所へ表示箇所を移す
+// 有効にする場合には、TRUE , 無効にする場合には FALSE を指定
+define('LISTBOX3_JUMP_TO_MODIFIED_PLACE',TRUE); // TRUE or FALSE
+
 function plugin_listbox3_action() {
   global $script, $vars;
   check_editable($vars['refer'], true, true);
@@ -30,7 +34,7 @@ function plugin_listbox3_action() {
     $pagedata .= $line;
   }
   page_write($vars['refer'], $pagedata);
-  if( $pagedata != '' ) {
+  if( LISTBOX3_JUMP_TO_MODIFIED_PLACE && $pagedata != '' ) {
     header("Location: $script?".rawurlencode($vars['refer'])."#listbox3_no_".$vars['number']);
     exit;
   }
