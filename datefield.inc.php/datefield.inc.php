@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 0.5 2004/01/05 01:53:32 jjyun Exp $
+// $Id: datefield.inc.php,v 0.7 2004/01/25 19:02:32 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -39,7 +39,10 @@ function plugin_datefield_action() {
   	  if ($post['number'] == $number++) {
   	    //ターゲットのプラグイン部分
 	    $para_array=preg_split('/,/',$opt);
-	    plugin_datefield_chkFormat($post['refer'],$post['infield'],$para_array[1]);
+	    $errmsg = plugin_datefield_chkFormat($post['infield'],$para_array[1]);
+	    if(strlen($errmsg)>0){
+		plugin_datefield_outputErrMsg($post['refer'], $errmsg);
+	    }	    
 	    
   	    $opt = preg_replace('/[^,]*/', $post['infield'], $opt, 1);
   	  }
@@ -54,9 +57,11 @@ function plugin_datefield_action() {
   return array('msg' => '', 'body' => '');
 }
 
-
-function plugin_datefield_chkFormat($page, $chkedStr, $formatStr){
-
+/* * function plugin_datefield_chkFormat($chkedStr, $formatStr) 
+ * 日付(確認対象)文字列と日付書式文字列の確認を行う
+ * 問題がなければ空文字列を、不具合があればその内容を示す文字列を返す
+ */
+function plugin_datefield_chkFormat($chkedStr, $formatStr){
   if( strlen($formatStr) == 0) $formatStr='YYYY/MM/DD';
   $formatReg = $formatStr;
 
@@ -65,7 +70,7 @@ function plugin_datefield_chkFormat($page, $chkedStr, $formatStr){
     $errmsg =
       "日付書式文字列 " . $formatStr .
       " にクォート文字(&nbsp;&#039;&nbsp;&quot;&nbsp;)を使用しないでください。";
-    plugin_datefield_outputErrMsg($page, $errmsg);
+    return $errmsg;
   }
 
   /* 入力値と日付書式との比較 */
@@ -75,56 +80,42 @@ function plugin_datefield_chkFormat($page, $chkedStr, $formatStr){
     $errmsg =
       "入力値が日付書式 " . $formatStr . 
       " と合致しません。<br />ゼロパディングも考慮してください。";
-    plugin_datefield_outputErrMsg($page, $errmsg);
+    return $errmsg;
   }
 
-  /* 入力日付の妥当性確認 */
-  $formatPtn = $dateArgs = preg_replace('/\//','\\/',$formatStr);
-  $year = $month = $day = -1;
-  $formatPtn = preg_replace('/YYYY/i','%04d',$formatPtn);
-  $formatPtn = preg_replace('/(YY|MM|DD)/i','%02d',$formatPtn);
+  $date = plugin_datefield_getDate($chkedStr, $formatStr);
+  $year  = $date['year'];
+  $month = $date['month'];
+  $day   = $date['day'];
 
-  $dateArgs =  preg_replace('/YYYY|YY/i',',\$year',$dateArgs);
-  $dateArgs =  preg_replace('/MM/i',',\$month',$dateArgs);
-  $dateArgs =  preg_replace('/DD/i',',\$day',$dateArgs);
-  $dateArgs =  preg_replace('/[^(?!:,\$year|,\$month|,\$day)]+/','',$dateArgs);
-
-  $scanStr = preg_replace('/\//','\\/',$chkedStr);
-  if( strcmp($scanStr,$formatPtn) == 0){
-    return TRUE;
-  }
-  $formatPtn = ",\"" . $formatPtn . "\"";
-  $parseStr = "sscanf(\"$scanStr\" $formatPtn $dateArgs);";
-  eval($parseStr);
-
-  if($month == -1 or $day == -1){
-    if( $year == -1 and $month == -1 and $day == -1){
-      $errmsg =  "日付確認時の想定外エラーです。<br />";
-      $errmsg .= "確認対象文字列: $chkedStr <br />";
-      $errmsg .= "日付書式文字列: $formatStr <br />";
-      $errmsg .= "引受変数文字列: $dataArgs <br />";
-      $errmsg .= "パース書式状態: $parseStr <br />";
-      $errmsg .= "読み取り状態:year = $year, month = $month, day = $day<br />";
-      plugin_datefield_outputErrMsg($page, $errmsg);
-    }
-    /* 入力範囲の妥当性確認のみ */
-    if( $month == -1 and $day > 31 ){
-	$errmsg = "日付の指定 " . $chkedStr 
-	  . " が通常取り得る値から外れています。";
-	plugin_datefield_outputErrMsg($page, $errmsg);
-    }else if($month == 0 or $month > 12 and $day == -1){
-	$errmsg = "月の指定 " . $chkedStr 
-	  . " が通常取り得る値から外れています。";
-	plugin_datefield_outputErrMsg($page, $errmsg);
-    }
+  if( $year == -1 and $month == -1 and $day == -1){
+    $errmsg =  "日付確認時の想定外エラーです。<br />";
+    $errmsg .= "確認対象文字列: $chkedStr <br />";
+    $errmsg .= "日付書式文字列: $formatStr <br />";
+    $errmsg .= "引受変数文字列: {$date['dateArgs']} <br />";
+    $errmsg .= "パース書式状態: {$date['parseStr']} <br />";
+    $errmsg .= "読み取り状態:year = $year, month = $month, day = $day<br />";
+    return $errmsg;
+  }else if($month <= 0 or $month > 12){
+    /* 月の指定は必須 */
+    $errmsg = "月の指定 " . $chkedStr    . " が通常取り得る値から外れています。";
+    return $errmsg;
   }else{
-    if($year == -1) $year = date("Y",time());
-    if (! checkdate( $month, $day , $year) ){
-      $errmsg = "入力日付 " . $chkedStr . " が不適切です。";
-      plugin_datefield_outputErrMsg($page, $errmsg);
+    /* 月指定がある状態 */
+    if( $day > 31){
+      $errmsg = "日付の指定 " . $chkedStr  . " が通常取り得る値から外れています。";
+      return $errmsg;
+    }else{
+      /* 指定がない時は 補間する */
+      if($year == -1) $year = date("Y",time());
+      if($day  == -1) $day  = 1;
+      if (! checkdate( $month, $day , $year) ){
+        $errmsg = "入力日付 " . $chkedStr . " が不適切です。";
+	return $errmsg;
+      }
     }
   }
-  return TRUE;
+  return "";
 }
   
 function plugin_datefield_outputErrMsg($page, $errmsg){
@@ -137,8 +128,39 @@ function plugin_datefield_outputErrMsg($page, $errmsg){
   $page = str_replace('$1',make_search($page),$_title_cannotedit);
   catbody($title,$page,$body);
   exit;
-
 }  
+
+function plugin_datefield_getDate($dateStr, $formatStr){
+  $formatPtn = $dateArgs = preg_replace('/\//','\\/',$formatStr);
+  $year = $month = $day = -1;
+
+  $formatPtn = preg_replace('/YYYY/i','%04d',$formatPtn);
+  $formatPtn = preg_replace('/(YY|MM|DD)/i','%02d',$formatPtn);
+
+  $dateArgs =  preg_replace('/YYYY|YY/i',',\$year',$dateArgs);
+  $dateArgs =  preg_replace('/MM/i',',\$month',$dateArgs);
+  $dateArgs =  preg_replace('/DD/i',',\$day',$dateArgs);
+  $dateArgs =  preg_replace('/[^(?!:,\$year|,\$month|,\$day)]+/','',$dateArgs);
+
+  // 区切り文字が '/'(バックスラッシュ)の場合はエスケープ文字を付与する
+  $scanStr = preg_replace('/\//','\\/',$dateStr);
+
+  if(! strcmp($scanStr,$formatPtn) == 0){
+    $formatPtn = ",\"" . $formatPtn . "\"";
+    $parseStr = "sscanf(\"$scanStr\" $formatPtn $dateArgs);";
+    eval($parseStr);
+  }
+  $date = array(
+    "year"      => $year,
+    "month"     => $month,
+    "day"       => $day,
+    "formatPtn" => $formatPtn,
+    "dateArgs"  => $dateArgs,
+    "parseStr"  => $parseStr );
+
+  return $date;
+}
+
 
 function plugin_datefield_convert() {
   global $html_transitional, $head_tags;
@@ -146,20 +168,24 @@ function plugin_datefield_convert() {
   // XHTML 1.0 Transitional
   $html_transitional = TRUE;
 
-  // <head>タグ内への<meta>宣言の追加
+  // <head> タグ内への <meta>宣言の追加
   $meta_str =
    " <meta http-equiv=\"content-script-type\" content=\"text/javascript\" /> ";
   if(! in_array($meta_str, $head_tags) ){
     $head_tags[] = $meta_str;
   }
 
+  // datefield プラグインの部分のHTML出力
   $number = plugin_datefield_getNumber();
   if(func_num_args() > 0) 
     {
       $options = func_get_args();
-      $value = array_shift($options);
-      $option = array_shift($options);
-      return plugin_datefield_getBody($number, $value, $option);
+      $value      = array_shift($options);
+      $format_opt = array_shift($options);
+      $caldsp_opt = array_shift($options);
+      
+      return plugin_datefield_getBody(
+	     $number, $value, $format_opt, $caldsp_opt);
     }
   return FALSE;
 }
@@ -175,29 +201,53 @@ function plugin_datefield_getNumber() {
 }
 
 
-function plugin_datefield_getBody($number, $value, $option) {
+function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
   global $script, $vars;
+
   $page_enc = htmlspecialchars($vars['page']);
   $script_enc = htmlspecialchars($script);
+
+  // datefield 用の<script>タグの挿入
   $body = ($number == 0) ? plugin_datefield_getScript() : '';
-  $option= trim($option);
-  if(strlen($option) == 0 )  $option = 'YYYY/MM/DD';
-  if(preg_match('/^[\'\"].*[\"\']$/',$option)){ /* " */
-    $option = '\'' . substr($option,1,strlen($option)-2) . '\'';
+
+  // 日付書式指定文字列に対する処理
+  $format_opt= trim($format_opt);
+  if(strlen($format_opt) == 0 )  $format_opt = 'YYYY/MM/DD';
+  if(preg_match('/^[\'\"].*[\"\']$/',$format_opt)){ /* " */
+    $format_opt = '\'' . substr($format_opt,1,strlen($format_opt)-2) . '\'';
   }else{
-    $option = '\'' . $option . '\'';
+    $format_opt = '\'' . $format_opt . '\'';
   }
   
-  $field_size = strlen($option); 
+  // カレンダー表示設定に対する処理
+  if($caldsp_opt != 'CUR') $caldsp_opt = 'REL';
+
+  // 保存された日付から値を取得
+  $formatStr =substr($format_opt,1,strlen($format_opt)-2);
+  $errmsg = plugin_datefield_chkFormat($value,$formatStr);
+  if(strlen($errmsg)==0 and $caldsp_opt == 'REL'){
+    $date= plugin_datefield_getDate($value, $formatStr);
+    /* 指定がない時は 補間する */
+    if($date['year'] == -1) $date['year'] = date("Y",time());
+    if($date['day']  == -1) $date['day']  = 1;
+  }else{
+    $date = array(
+     "year"  => date("Y",time()),
+     "month" => date("m",time()),
+     "day"   => date("d",time()) ); 
+  }
+
+  $field_size = strlen($format_opt); 
 
   $body .= <<<EOD
-    <form name="subClndr$number" id="subClndr$number" action="$script_enc"
+    <form name="subClndr$number" action="$script_enc"
     method='post' style="margin:0;">
     <div  style="white-space:nowrap; ">
     <input type="text" name="infield" value="$value" size="{$field_size}"
     onchange="this.form.submit();" />
     <input type="button" value="…"
-    onclick="dspCalendar(this.form.infield, event, $option );" />
+    onclick="dspCalendar(this.form.infield, event, $format_opt, 0,
+     {$date['year']},{$date['month']}-1,{$date['day']} );" />
       <input type="hidden" name="refer" value="$page_enc" />
       <input type="hidden" name="plugin" value="datefield" />
       <input type="hidden" name="number" value="$number" />

@@ -1,5 +1,5 @@
 /* *******************************************************************
- * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.5
+ * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.7
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -29,9 +29,9 @@ dspCalendar.offsetY = -30;
 
 // カレンダの大きさの指定 
 dspCalendar.width  = 160;
-dspCalendar.height = 220;
+dspCalendar.height = 250;
 if(isMOZ)
-  dspCalendar.height = 190;
+  dspCalendar.height = 220;
   
 // ===================================================================
 
@@ -59,27 +59,41 @@ dspCalendar.headHTML =
   + ' <div style="text-align: center;"> \n'
   + ' <table border="0" width="140" class="datefield" > \n';
 
-function dspCalendar(obj, event, dateFormatType, diffMonth){
+// 注意: stdMonth は 1月が0、... 12月は11 で指定すること
+function dspCalendar(obj, event, dateFormatType, diffMonth,
+	 	 stdYear,stdMonth,stdDay){
   
   if(dspCalendar.obj == ""){
     dspCalendar.obj = obj;
   }
+
+  // 現在の時間情報の取得
+  this.now =  new Date();
+  this.nowyear  = this.now.getFullYear();
+  this.nowmonth = this.now.getMonth() ;
+  this.nowdate  = this.now.getDate(); 
 
   if(!arguments[2]){
     dspCalendar.dateFormatType = '\'YYYY/MM/DD\'';
   } else {
     dspCalendar.dateFormatType = '\''+ dateFormatType + '\'';
   }
-  if(!arguments[3])this.diffMonth = 0;
-  else this.diffMonth += diffMonth;
+  if(isNaN(this.diffMonth))this.diffMonth = 0;
+  if(!arguments[3])diffMonth = 0;
+  this.diffMonth += diffMonth;
+
+  // カレンダ表示月基準日情報
+  if(!arguments[4])this.stdyear  = this.nowyear;
+  else this.stdyear  = stdYear;
+  if(!arguments[5])this.stdmonth = this.nowmonth;
+  else this.stdmonth = stdMonth;
+  if(!arguments[6])this.stdday   = this.nowday;
+  else this.stdday   = stdDay;
+  var cldrDate =
+   new Date(this.stdyear, this.stdmonth + this.diffMonth , 1);
 
   // Window 作成時のみ値を設定するもの
   if(!dspCalendar.calendarWindow.document){
-    // 現在の時間情報の取得
-    this.now =  new Date();
-    this.nowyear  = this.now.getFullYear();
-    this.nowmonth = this.now.getMonth() ;
-    this.nowdate  = this.now.getDate(); 
 
     var browserLang;
     if( DOM==2 || DOM==3 ){ 
@@ -97,22 +111,37 @@ function dspCalendar(obj, event, dateFormatType, diffMonth){
       this.week = new Array('Sun','Mon','Tue','Wed','Thr','Fri','Sat');
     }
 
-    // カレンダー構築用HTML(フッター)
-    // ステータス行 日付タイプ
-    var footHTML = '<tr>\n'
-      + '  <td colspan="7" align="center" style="font-size:13px">\n'
-      + '<b>'+ dspCalendar.dateFormatType ;
-    footHTML += '</b>\n </td>\n </tr>\n\n'
-      + '</table>\n </div> \n </body>\n </html>\n';
-    dspCalendar.footHTML = footHTML;
-
     var x = event.screenX + dspCalendar.offsetX;
     var y = event.screenY + dspCalendar.offsetY;
     mkSubWin('','calendar',x, y, dspCalendar.width, dspCalendar.height);
   }
 
-  // カレンダ表示月基準日情報
-  var cldrDate = new Date(this.nowyear, this.nowmonth + this.diffMonth , 1);
+  // カレンダー構築用HTML(フッター)
+  // ステータス行 日付タイプ
+  var footHTML = '<tr>\n'
+    + '  <td colspan="7" align="center" class="datefield-footer">\n'
+    + '<b>'+ dspCalendar.dateFormatType 
+    + '</b>\n </td>\n </tr>\n'
+    + '<tr>\n '
+    + '  <td colspan="7" align="center" class="datefield-footer">\n'
+    + '<input type="button" value="now"'
+    + ' onclick="self.opener.dspCalendar(self.opener.document.' //"
+    +  obj.form.name + '.' + obj.name  + ' ,null, '
+    + dspCalendar.dateFormatType + ', '
+    + ( 12*(this.nowyear  - this.stdyear)
+          + (this.nowmonth - this.stdmonth)
+          -  this.diffMonth )
+    + ', ' + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
+    + ')" />\n' //"
+    + '<input type="button" value="reset"'
+    + ' onclick="self.opener.dspCalendar(self.opener.document.' //"
+    +  obj.form.name + '.' + obj.name  + ' ,null, '
+    + dspCalendar.dateFormatType + ', ' + (-1 * this.diffMonth)
+    + ', ' + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
+    + ')" />\n'; //"
+
+   footHTML += '\n</table>\n\n</div> \n </body>\n </html>\n';
+   dspCalendar.footHTML = footHTML;
 
   // カレンダー表示月情報の取得とタイトルの作成
   var dspYYYY = cldrDate.getFullYear();
@@ -125,19 +154,23 @@ function dspCalendar(obj, event, dateFormatType, diffMonth){
   var cldrHTML = dspCalendar.headHTML;
 
   // カレンダー構築用HTML(動的変更部分): Month
-  cldrHTML += '<tr class="datefield-month" > \n';
-  cldrHTML += '<th colspan="7" align="center">\n';
-  cldrHTML += '<input type="button" value="&lt;&lt;"';
-  cldrHTML += ' onclick="self.opener.dspCalendar(self.opener.document.';
-  cldrHTML +=  obj.form.name + '.' + obj.name ;
-  cldrHTML += ' ,null, ' + dspCalendar.dateFormatType + ', -1)" />\n';
-  cldrHTML += titleDspMonth + '\n';
-  cldrHTML += '<input type="button" value="&gt;&gt;"';
-  cldrHTML += ' onclick="self.opener.dspCalendar(self.opener.document.';
-  cldrHTML +=  obj.form.name + '.' + obj.name ;
-  cldrHTML += ' ,null, ' + dspCalendar.dateFormatType + ', 1);" />\n';
-  cldrHTML += ' </th>\n';
-  cldrHTML += '</tr>\n';
+  cldrHTML += '<tr class="datefield-month" > \n'
+   + '<th colspan="7" align="center">\n'
+   + '<input type="button" value="&lt;&lt;"'
+   + ' onclick="self.opener.dspCalendar(self.opener.document.'
+   +  obj.form.name + '.' + obj.name 
+   + ' ,null, ' + dspCalendar.dateFormatType + ', -1, '
+   + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday 
+   + ')" />\n'
+   + titleDspMonth + '\n'
+   + '<input type="button" value="&gt;&gt;"'
+   + ' onclick="self.opener.dspCalendar(self.opener.document.'
+   +  obj.form.name + '.' + obj.name 
+   + ' ,null, ' + dspCalendar.dateFormatType + ', 1, '
+   + this.stdyear + ', ' + this.stdmonth + ', ' + this.stdday
+   + ');" />\n'
+   + ' </th>\n'
+   + '</tr>\n';
 
   // カレンダー構築用HTML(動的変更部分) : Week
   cldrHTML += ' <tr> \n';
@@ -167,9 +200,13 @@ function dspCalendar(obj, event, dateFormatType, diffMonth){
        wrtYYYY = wrtDate.getFullYear();
 
        if( wrtYYYY == this.nowyear &&
-           wrtMM == this.nowmonth &&
-           wrtDD == this.nowdate  ){
+           wrtMM   == this.nowmonth &&
+           wrtDD   == this.nowdate  ){
             cldrHTML += '  <td class="datefield-now" >\n';
+       }else if(wrtYYYY == this.stdyear &&
+                wrtMM   == this.stdmonth &&
+                wrtDD   == this.stdday  ){
+            cldrHTML += '  <td class="datefield-std" >\n';
        }else if(wrtYYYY == dspYYYY &&
                   wrtMM == dspMM ){
 	    cldrHTML += '  <td class="datefield-samemonth" >\n';

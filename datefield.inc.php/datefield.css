@@ -1,6 +1,6 @@
 @charaset "shift-jis";
 
-/* datefield.css v 0.5 (for datefield.inc.php, datefield.js)*/
+/* datefield.css v 0.7 (for datefield.inc.php, datefield.js)*/
 body.datefield
 {
   background-image:none;
@@ -107,6 +107,12 @@ td.datefield-now /* today's cell */
    background-color: #ffffb3;
 }
 
+td.datefield-std /* standard day's cell */
+{
+   width: 14px;
+   background-color: #ffb3e6;
+}
+
 td.datefield-samemonth 
 {
    width: 14px;
@@ -122,6 +128,7 @@ td.datefield-diffmonth
 td.datefield-footer
 {
    font-size:13px;
+   white-space:nowrap; 
 }
 
 /* *** */ 
