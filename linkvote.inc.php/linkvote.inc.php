@@ -141,7 +141,7 @@ function plugin_linkvote_inline()
 	$f_digest = rawurlencode($ndigest);
 	$f_vote_plugin_votes = rawurlencode($_vote_plugin_votes);
 	$f_disturl = rawurlencode($str_disturl);
-	$f_cnf = '';
+	$f_cnt = '';
 	if ( $nonumber == FALSE ) {
 		$title = $notitle ? '' : "title=\"$o_vote_inno\"";
 		$f_cnt = "<span $title>&nbsp;" . $cnt . "&nbsp;</span>";
