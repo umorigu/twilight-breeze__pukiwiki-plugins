@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.2 2004/02/01 04:26:02 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.3 2004/02/14 00:26:02 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
 function plugin_listbox3_action() {
@@ -96,20 +96,23 @@ function plugin_listbox3_getOptions($value, $config_name, $field_name) {
   }
   $config->name = $config_name;
 
-  
+  $isSelect = 0;
   foreach($config->get($field_name) as $options) {
     $s_option=$options[0];
-    if($s_option == '') {
-      continue;
-    }
+    if($s_option == '') continue;
     $option_enc = htmlspecialchars($s_option);
     if($value == $s_option) {
+      $isSelect = 1;
       $options_html .= "<option value='$option_enc' selected='selected'>$option_enc</option>";
     } else {
       $options_html .= "<option value='$option_enc'>$option_enc</option>";
     }
   }
-
+  
+  if($isSelect == 0){
+    $options_html =
+      "<option value='…' selected='selected'>…</option>" . $options_html;
+  }
   return $options_html;
 }
 ?>
