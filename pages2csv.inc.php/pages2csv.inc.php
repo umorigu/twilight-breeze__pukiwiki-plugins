@@ -16,8 +16,9 @@ function plugin_pages2csv_init()
 {
   if (function_exists('plugin_tracker_init'))
   {
-    plugin_tracker_init();
+      plugin_tracker_init();
   }
+  
   $messages = array(
     '_pages2csv_messages' => array(
 		   'btn_submit' => '実行',
@@ -201,6 +202,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   $config->config_name = $config_name;
 
   // tracker_list の filter設定
+  $list_filter = NULL;
   if($filter_name != NULL) {
     $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
     
@@ -210,7 +212,9 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 		    'msg' => "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>",
 		   );
     }
+    $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
   }
+  unset($filger_config);
 
   // pages2csv の extract設定
   $extract_arg_filter = NULL;
@@ -227,10 +231,10 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
   }
   unset($extract_config);
 
+  // 出力内容の取得
   $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,
-				      $filter_name, $filter_config,
-				      $extract_arg_filter);
-  
+				      $list_filter, $extract_arg_filter);
+
   // 出力内容のエンコーディング処理
   if ($encode != '' ) {
     if( !function_exists('mb_convert_encoding') )
@@ -288,15 +292,14 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 
 
 function plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order='', $limit=NULL,
-				     $filter_name=NULL,$filter_config=NULL,
-				     $extract_arg_filter=NULL)
+				     $list_filter=NULL, $extract_arg_filter=NULL)
 {
+  $filter_name = is_null($list_filter) ? NULL : $list_filter->filter_name;
 
-  $list = &new Pages2csv_Tracker_csvlist($page,$refer,$config,$list,$filter_name,
+  $list = &new Pages2csv_Tracker_csvlist($page,$refer,$config,$list, $filter_name,
 					 $extract_arg_filter);
-  if($filter_name != NULL)
+  if($list_filter != NULL)
   {
-    $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
     $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
   }
   $list->sort($order);
