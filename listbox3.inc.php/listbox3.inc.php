@@ -2,16 +2,16 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.4 2004/02/14 23:35:02 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.5 2004/08/13 11:48:02 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
 function plugin_listbox3_action() {
-  global $vars, $post;
-  check_editable($post['refer'], true, true);
+  global $vars;
+  check_editable($vars['refer'], true, true);
 
   $number = 0;
   $pagedata = '';
-  $pagedata_old  = get_source($post['refer']);
+  $pagedata_old  = get_source($vars['refer']);
   foreach($pagedata_old as $line) {
     if(!preg_match('/^(?:\/\/| )/', $line)) {
       if (preg_match_all('/(?:#listbox3\(([^\)]*)\))/', $line, $matches, PREG_SET_ORDER)) {
@@ -19,9 +19,9 @@ function plugin_listbox3_action() {
 	$line = $paddata[0];
 	foreach($matches as $i => $match) {
 	  $opt = $match[1];
-	  if($post['number'] == $number++) {
+	  if($vars['number'] == $number++) {
 	    //ターゲットのプラグイン部分
-	    $opt = preg_replace('/[^,]*/', $post['value'], $opt, 1);
+	    $opt = preg_replace('/[^,]*/', $vars['value'], $opt, 1);
 	  }
 	  $line .= "#listbox3($opt)" . $paddata[$i+1];
 	}
@@ -29,7 +29,7 @@ function plugin_listbox3_action() {
     }
     $pagedata .= $line;
   }
-  page_write($post['refer'], $pagedata);
+  page_write($vars['refer'], $pagedata);
   return array('msg' => '', 'body' => '');
 }
 
