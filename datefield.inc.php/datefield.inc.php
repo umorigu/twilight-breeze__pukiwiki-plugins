@@ -25,7 +25,7 @@
 
 // 修正後のリロード時に、編集箇所へ表示箇所を移す
 // 有効にする場合には、TRUE , 無効にする場合には FALSE を指定
-define('DATEFIELD_JUMP_MODIFIED_PLACE',TRUE); // TRUE or FALSE
+define('DATEFIELD_JUMP_TO_MODIFIED_PLACE',TRUE); // TRUE or FALSE
 
 function plugin_datefield_init() {
   $msg = array(
@@ -84,7 +84,7 @@ function plugin_datefield_action() {
   }
 
   page_write($vars['refer'], $pagedata); 
-  if( DATEFIELD_JUMP_MODIFIED_PLACE  && $pagedata != '' ) {
+  if( DATEFIELD_JUMP_TO_MODIFIED_PLACE  && $pagedata != '' ) {
     header("Location: $script?".rawurlencode($vars['refer'])."#datefield_no_".$vars['number']);
     exit;
   }
