@@ -190,21 +190,6 @@ function plugin_datefield_getDate($dateStr, $formatStr){
   return $date;
 }
 
-function plugin_datefield_getDateStrWithFormat($format_opt,$yyyy,$mm,$dd ){
-  $strWithFormat = $format_opt;
-  $yy = $yyyy%100;
-
-  $mm += 1; // 引数の月の値の範囲 month is 0 - 11
-  if ($yy < 10) $yy = "0" . $yy;
-  if ($mm < 10) $mm = "0" . $mm;
-  if ($dd < 10) $dd = "0" . $dd;
-  $strWithFormat = preg_replace('/YYYY/i', $yyyy, $strWithFormat);
-  $strWithFormat = preg_replace('/YY/i',   $yy,   $strWithFormat);
-  $strWithFormat = preg_replace('/MM/i',   $mm,   $strWithFormat);
-  $strWithFormat = preg_replace('/DD/i',   $dd,   $strWithFormat);
-  return $strWithFormat;
-}
-
 // header宣言の中で以下の２つの定義を行う
 // ・Javasciptを用いること、
 // ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
