@@ -2,19 +2,15 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.3 2004/07/08 05:30:31 jjyun Exp $
-//
+// $Id: pages2csv.inc.php,v 0.4 2004/08/13 14:56:31 jjyun Exp $
 // 
-
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
 define('PAGES2CSV_UPLOAD_ADMIN_ONLY',TRUE); // FALSE or TRUE
 /////////////////////////////////////////////////
-// アップロード/削除時にパスワードを要求する(ADMIN_ONLYが優先)
-define('PAGES2CSV_PASSWORD_REQUIRE',FALSE); // FALSE or TRUE
 
-require_once(PLUGIN_DIR.'tracker.inc.php');
-require_once(PLUGIN_DIR."attach.inc.php");
+require_once( PLUGIN_DIR . 'tracker.inc.php');
+require_once( PLUGIN_DIR . "attach.inc.php");
 
 function plugin_pages2csv_init()
 {
@@ -89,7 +85,9 @@ function plugin_pages2csv_convert()
   $s_filter = htmlspecialchars($filter);
   
   $pass = '';
-  if (PAGES2CSV_PASSWORD_REQUIRE or PAGES2CSV_UPLOAD_ADMIN_ONLY)
+  // attach.inc.php で アップロード/削除時にパスワードを要求する設定であった場合か
+  // もしくは、CSVファイルの作成を管理者だけが行えるようにした場合
+  if ( ATTACH_PASSWORD_REQUIRE or PAGES2CSV_UPLOAD_ADMIN_ONLY)
     {
       $title = $_attach_messages[PAGES2CSV_UPLOAD_ADMIN_ONLY ?
 				'msg_adminpass' : 'msg_password'];
@@ -128,62 +126,74 @@ function plugin_pages2csv_action()
   global $adminpass;
   
   // $vars['refer'] : 当該のplugin を設置したページ
-  // $vars['page']  : リスト表示するtrackerのページの格納場所
-  $r_page = $vars['s_page'];
-  $config = $vars['config'];
-  $list   = array_key_exists('list',$vars) ? $vars['list'] : 'list';
-  $order  = array_key_exists('order',$vars) ? $vars['order'] : '_real:SORT_DESC';
-  $imit   = array_key_exists('limit',$vars) ? $vars['limit'] : NULL ;
-  $filter = array_key_exists('filter',$vars) ? $vars['filter'] : NULL ;
-  
+  // $vars['s_page']  : リスト表示するtrackerのページの格納場所
+  // ページ名が NULL である場合は存在しないと想定
+  // また $pass は あくまでユーザ側からのパスワードフレーズを表すこととする。
+  $s_page = array_key_exists('s_page',$vars) ? htmlspecialchars($vars['s_page']) : NULL;
+  $refer = array_key_exists('refer',$vars) ? htmlspecialchars($vars['refer']) : NULL;
+  $pass = array_key_exists('pass',$vars) ? htmlspecialchars($vars['pass']) : NULL;
+
+  // Authentication
+  if ( ! is_pagename($refer) ) 
+    return array('result'=>FALSE,'msg'=>$_attach_messages['err_noparm']);
+  else if (! is_pagename($s_page) ) 
+    return array('result'=>FALSE,'msg'=> "$s_page page is not exist.");
+  else {
+    check_editable($refer);  // 添付先のページが書き込み可能か？
+    check_readable($s_page); // 参照先のページが読み込み可能か？
+  }
+
+  if (PAGES2CSV_UPLOAD_ADMIN_ONLY and
+      ($pass === NULL or md5($pass) != $adminpass ))
+  {
+    return   array('result'=>FALSE,'msg'=>$_attach_messages['err_adminpass']);
+  }
+
+  // Upload
+  return plugin_pages2csv_upload($vars, $refer, $s_page, $pass);  
+}
+
+function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
+{
+  global $_attach_messages;
+
+  // 利用するプラグインの存在チェック
   if (!exist_plugin('attach') or !function_exists('attach_upload')  )
   {
     return array('msg'=>'attach.inc.php not found or not correct version.');
   }
 
-  // Authentication
-  if (array_key_exists('refer',$vars) and is_pagename($vars['refer']))
-  {
-    check_editable($vars['refer']);
-    check_readable($r_page);
-  }else{
-    return array('msg'=>'page is not exist.');
-  }
-  
-  $refer=$vars['refer'];
-  $pass = array_key_exists('pass',$vars) ? md5($vars['pass']) : NULL;
-  
+  // 各種パラメータの読み込み
+  $config = array_key_exists('config',$vars) ? htmlspecialchars($vars['config']) : 'default';
+  $list = array_key_exists('list',$vars)   ? htmlspecialchars($vars['list']) : 'list';
+  $order = array_key_exists('order',$vars) ? htmlspecialchars($vars['order']) :'_real:SORT_DESC';
+  $filter = array_key_exists('filter',$vars) ? htmlspecialchars($vars['filter']) : NULL ;
+  $limit = array_key_exists('limit',$vars) ? htmlspecialchars($vars['limit']) : NULL ;
+  $limit = is_numeric($limit) ? $limit : NULL;  // limit は数値データを取るため
 
   // テンポラリファイルへの出力
   $tempname = tempnam("","pages2csv_temp");
   $fp = fopen($tempname,"w");
-  $pstr = plugin_pages2csv_getcsvlist($r_page,$refer,$config,$list,$order,$limit,$filter);
+  $pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,$filter);
   fwrite($fp,$pstr);
   fclose($fp);
 
+  // 添付ファイル名の準備
   $csvfilename = "pages2csv_". date("ymdHi",time()).".csv";
 
-  // 以下、attach.inc.php の attach_upload()関数を踏襲..
+  // 以下、attach.inc.php の attach_upload()関数を参考にした
   // (理由)扱うファイルがHTTP POSTでアップロードしたファイルではないため、
   // 上記関数を流用することができない。
-
   if (filesize($tempname) > MAX_FILESIZE)
   {
+    unlink($tempname);
     return   array('result'=>FALSE,'msg'=>$_attach_messages['err_exceed']);
-  }
-  if (!is_pagename($refer) or ($pass !== TRUE and !is_editable($refer)))
-  {
-    return   array('result'=>FALSE,'msg'=>$_attach_messages['err_noparm']);
-  }
-  if (PAGES2CSV_UPLOAD_ADMIN_ONLY and $pass !== TRUE
-      and ($pass === NULL or $pass != $adminpass))
-  {
-    return   array('result'=>FALSE,'msg'=>$_attach_messages['err_adminpass']);
   }
 
   $obj = &new AttachFile($refer,$csvfilename);
   if ($obj->exist)
   {
+    unlink($tempname);
     return   array('result'=>FALSE,'msg'=>$_attach_messages['err_exists']);
   }
   if (rename($tempname,$obj->filename))
@@ -198,11 +208,12 @@ function plugin_pages2csv_action()
   }
 
   $obj->getstatus();
-  $obj->status['pass'] = ($pass !== TRUE and $pass !== NULL) ? $pass : '';
+  $obj->status['pass'] = ($pass !== NULL) ? md5($pass) : '';
   $obj->putstatus();
-  
+
   return  array('result'=>TRUE,'msg'=>$_attach_messages['msg_uploaded']);
 }
+
 
 function plugin_pages2csv_getcsvlist($page,$refer,$config_name,
 $list,$order='', $limit=NULL, $filter_name=NULL)
@@ -228,7 +239,7 @@ $list,$order='', $limit=NULL, $filter_name=NULL)
     $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
   }
   $list->sort($order);
-  
+
   return $list->toString($limit);
 }
 
