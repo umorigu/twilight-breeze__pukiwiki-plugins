@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.5 2004/08/13 11:48:02 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.6 2004/12/31 17:11:02 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
 // 修正後のリロード時に、編集箇所へ表示箇所を移す
