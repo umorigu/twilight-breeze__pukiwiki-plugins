@@ -4,7 +4,7 @@
 //
 // Issue tracker plugin (See Also bugtrack plugin)
 // This script is modified by jjyun. (2004/02/22 - 2005/02/08) 
-//   tracker.inc.php-modified, v 1.4 2005/02/08 00:27:52 jjyun
+//   tracker.inc.php-modified, v 1.5 2005/02/20 18:40:32 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 
@@ -746,7 +746,10 @@ class Tracker_list
 			   );
 
 	var $cache = array('level' => TRACKER_LIST_CACHE_DEFAULT ,
-			   'state' => array('hits' => 0, 'total' => 0, 'cnvrt' => FALSE), 
+			   'state' => array('stored_total' => 0,  // cacheにあるデータ数
+					    'hits' => 0,          // cache内にある有効なデータ数
+					    'total' => 0,         // 更新分を含めて最終的に有効なデータ数
+					    'cnvrt' => FALSE), 
 			   'verbs' => FALSE,
 			   );
 
@@ -782,8 +785,11 @@ class Tracker_list
 		$this->cache['level'] = (abs($cache) <= $this->cache_level['LV2']) ? abs($cache) : $this->cache_level['NO']; 
 
                 // ページの列挙と取り込み
+
+		// cache から cache作成時刻からデータを取り込む
+		// $this->add()での処理の前にあらかじめ cache から取り込んでおくことで、
+		// $this->add()の無限ループ防止ロジックを利用して、対象データを含むページの読み込みを行わせない。
                 $this->get_cache_rows();
-		$this->cache['state']['hits'] = count($this->rows);
 
                 $pattern = "$page/";
                 $pattern_len = strlen($pattern);
@@ -1106,20 +1112,30 @@ class Tracker_list
 		// (jjyun) I tryed csv_explode() function , but this behavior is not match as I wanted.
 
 		$column_names = fgetcsv($fp, filesize($cachefile));
+
+		$stored_total = 0;
 		while ($arr = fgetcsv($fp, filesize($cachefile)) )
 		{
+		  
 			$row = array();
+			$stored_total +=1;
+			// This code include cache contents in $rows.
 			foreach($arr as $key => $value)
 			{
 				$column_name = $column_names[$key];
-				// '_match' is not fields , but this value is effect for tracker_list.
+				// (note) '_match' is not fields ,
+				//  but '_match' value is effect for tracker_list.
 				if( isset($this->fields[$column_name]) || $column_name =='_match')
 				{
 					$row[$column_name] = stripslashes($value);
 				}
 			}
 
-			if ( isset($row['_real']) 
+			// This code check cache effective.
+			//  by means of comparing filetime between real page and cache contents.
+			// If cache is effective, this code include cache contents in rows.
+
+			if ( isset($row['_real'])
 			     and isset($row['_update']) 
 			     and (get_filetime($this->page.'/'.$row['_real']) == $row['_update']) )
 			{
@@ -1129,6 +1145,9 @@ class Tracker_list
 
 		flock($fp,LOCK_UN);
 		fclose($fp);
+
+		$this->cache['state']['stored_total'] = $stored_total;
+		$this->cache['state']['hits'] = count($this->rows);
 	}
 
 	function put_cache_rows()
@@ -1141,7 +1160,8 @@ class Tracker_list
 			  die_message( CACHE_DIR . ' is not found or not readable.');
 			return;
 		}
-		if($this->cache['state']['hits'] == $this->cache['state']['total']) 
+		if( $this->cache['state']['hits'] == $this->cache['state']['total'] 
+		   and $this->cache['state']['hits'] == $this->cache['state']['stored_total'] )
 		{  
 			return '';
 		}
@@ -1209,7 +1229,8 @@ class Tracker_list
 			unlink($cachefile);  
 			return '';
 		}
-		if($this->cache['state']['hits'] != $this->cache['state']['total']) 
+		if($this->cache['state']['hits'] != $this->cache['state']['total'] or 
+		   $this->cache['state']['hits'] != $this->cache['state']['stored_total'] ) 
 		{  
 			return '';
 		}
