@@ -2,11 +2,13 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.3 2004/02/14 00:26:02 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.4 2004/02/14 23:35:02 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
 function plugin_listbox3_action() {
   global $vars, $post;
+  check_editable($post['refer'], true, true);
+
   $number = 0;
   $pagedata = '';
   $pagedata_old  = get_source($post['refer']);
