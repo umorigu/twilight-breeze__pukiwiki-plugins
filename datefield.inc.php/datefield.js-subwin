@@ -1,5 +1,5 @@
 /* *******************************************************************
- * dspCalendar.js : modified by jjyun (2003-2004) SubWindow-Ver.0.7.3
+ * dspCalendar.js : modified by jjyun (2003-2004) SubWindow-Ver.1.0
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -51,13 +51,13 @@ dspCalendar.headHTML =
   + '  content="application/xhtml+xml; charset=UTF-8" /> \n'
   + ' <meta http-equiv="content-style-type" content="text/css" /> \n'
   + ' <title>Calendar</title>\n '
-  + ' <link rel="stylesheet" href="skin/default.ja.css" \n'
+  + ' <link rel="stylesheet" href="skin/pukiwiki.css.php?charset=Shift_JIS" \n'
   + '  type="text/css" media="screen" charset="shift_jis" /> \n'
-  + ' <link rel="stylesheet" href="skin/user.ja.css" \n'
+  + ' <link rel="stylesheet" href="skin/user.css?charset=Shift_JIS" \n'
   + '  type="text/css" media="screen" charset="shift_jis" /> \n'
   + ' </head>\n <body class="datefield">\n'
   + ' <div style="text-align: center;"> \n'
-  + ' <script type="text/javascript" src="skin/datefield.js" ></script>\n'
+  + ' <script type="text/javascript" src="skin/datefieldw.js" ></script>\n'
   + ' <table border="0" width="140" class="datefield" > \n';
 
 
@@ -273,7 +273,7 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
 function getCallCalendarScript(rObj,rThis, tags, diff){
   var strRtn;
   strRtn = '<input type="button" value="' + tags + '"'
-   + ' onclick="dspCalendar(window.document.'
+   + ' onclick="self.opener.dspCalendar(self.opener.document.'
    +  rObj.form.name + '.' + rObj.name  + ' ,null, '
    + rThis.dateFormatType + ', ' + diff
    + ', ' + rThis.stdyear + ', ' + rThis.stdmonth + ', ' + rThis.stdday

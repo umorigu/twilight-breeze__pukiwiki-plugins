@@ -2,11 +2,12 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 0.9 2004/11/22 03:47:12 jjyun Exp $
+// $Id: datefield.inc.php,v 1.0 2004/12/31 10:15:42 jjyun Exp $
 //
 
 /* [概略の説明]
- * 日付入力補助画面付きフィールド提供プラグイン
+ * 日付入力補助画面付きフィールド提供プラグイン 
+ *    for pukiwiki-1.4.5 ( 2004/12-cvs version)
  *
  * 日付入力を行わせたいテキストフィールドと、
  * 日付入力を行うためのカレンダーを表示するボタンを提供します。
@@ -16,7 +17,36 @@
  * 
  * 制限：JavaScript を使っているのため,
  * Javascriptが使用できる環境でなければ動きません。
+ * 
+ * ブラウザ側の設定の他に、サーバ側の設定として
+ * pukiwiki.ini.php の PKWK_ALLOW_JAVASCRIPT を以下の設定にする必要があります
+ *   define('PKWK_ALLOW_JAVASCRIPT', 1);     // 0 or 1
  */ 
+
+// 修正後のリロード時に、編集箇所へ表示箇所を移す
+// 有効にする場合には、TRUE , 無効にする場合には FALSE を指定
+define('DATEFIELD_JUMP_MODIFIED_PLACE',TRUE); // TRUE or FALSE
+
+function plugin_datefield_init() {
+  $msg = array(
+    '_datefield_msg' => array(
+	   'format_not_effective' => "日付書式文字列 %s にクォート文字(&nbsp;&#039;&nbsp;&quot;&nbsp;)を使用しないでください。" ,
+	   'input_pattern_not_effective' =>  "入力値が日付書式 %s と合致しません。<br />"
+		   + "ゼロパディングも考慮してください。",
+	   'datecheck_irregular_error' => "日付確認時の想定外エラーです。<br />" 
+		   + "確認対象文字列: %s <br />"
+		   + "日付書式文字列: %s <br />"
+		   + "引受変数文字列: %s <br />"
+		   + "パース書式状態: %s <br />"
+		   + "読み取り状態:year = %s, month = %s, day = %s<br />",
+
+	   'datecheck_not_effective_month' => "月の指定 %s が通常取り得る値から外れています。", 
+	   'datecheck_not_effective_day'   => "日付の指定 %s が通常取り得る値から外れています。", 
+	   'datecheck_not_effective_date'  => "入力日付 %s が不適切です。",
+	   )
+    );
+  set_plugin_messages($msg);
+}
 
 function plugin_datefield_action() {
   global $script, $vars;
@@ -54,7 +84,7 @@ function plugin_datefield_action() {
   }
 
   page_write($vars['refer'], $pagedata); 
-  if( $pagedata != '' ) {
+  if( DATEFIELD_JUMP_MODIFIED_PLACE  && $pagedata != '' ) {
     header("Location: $script?".rawurlencode($vars['refer'])."#datefield_no_".$vars['number']);
     exit;
   }
@@ -66,14 +96,14 @@ function plugin_datefield_action() {
  * 問題がなければ空文字列を、不具合があればその内容を示す文字列を返す
  */
 function plugin_datefield_chkFormat($chkedStr, $formatStr){
+  global $_datefield_msg;
+
   if( strlen($formatStr) == 0) $formatStr='YYYY/MM/DD';
   $formatReg = $formatStr;
 
   /* クォート文字 の存在確認 */
   if(preg_match('/^.*[\'\"].*$/',$formatReg) ){ /* match character..." ' */ 
-    $errmsg =
-      "日付書式文字列 " . $formatStr .
-      " にクォート文字(&nbsp;&#039;&nbsp;&quot;&nbsp;)を使用しないでください。";
+    $errmsg = sprintf($_datefield_msg['format_not_effective'], $formatStr);
     return $errmsg;
   }
 
@@ -81,9 +111,7 @@ function plugin_datefield_chkFormat($chkedStr, $formatStr){
   $formatReg = preg_replace('/\//','\\/',$formatReg);
   $formatReg = '/^' . preg_replace('/[YMD]/i','\\d',$formatReg) .'$/';
   if( ! preg_match($formatReg,$chkedStr) ){
-    $errmsg =
-      "入力値が日付書式 " . $formatStr . 
-      " と合致しません。<br />ゼロパディングも考慮してください。";
+    $errmsg = sprintf($_datefield_msg['input_pattern_not_effective'], $formatStr);
     return $errmsg;
   }
 
@@ -93,28 +121,25 @@ function plugin_datefield_chkFormat($chkedStr, $formatStr){
   $day   = $date['day'];
 
   if( $year == -1 and $month == -1 and $day == -1){
-    $errmsg =  "日付確認時の想定外エラーです。<br />";
-    $errmsg .= "確認対象文字列: $chkedStr <br />";
-    $errmsg .= "日付書式文字列: $formatStr <br />";
-    $errmsg .= "引受変数文字列: {$date['dateArgs']} <br />";
-    $errmsg .= "パース書式状態: {$date['parseStr']} <br />";
-    $errmsg .= "読み取り状態:year = $year, month = $month, day = $day<br />";
+    $errmsg = sprintf($_datefield_msg['datecheck_irregular_error'],
+		      $chkedStr, $formatStr, $date['dateArgs'], $date['parseStr'],
+		      $year, $month, $day);
     return $errmsg;
   }else if($month <= 0 or $month > 12){
     /* 月の指定は必須 */
-    $errmsg = "月の指定 " . $chkedStr    . " が通常取り得る値から外れています。";
+    $errmsg = sprintf($_datefield_msg['datecheck_not_effective_month'], $chkedStr );
     return $errmsg;
   }else{
     /* 月指定がある状態 */
     if( $day > 31){
-      $errmsg = "日付の指定 " . $chkedStr  . " が通常取り得る値から外れています。";
+      $errmsg = sprintf($_datefield_msg['datecheck_not_effective_day'], $chkedStr );
       return $errmsg;
     }else{
       /* 指定がない時は 補間する */
       if($year == -1) $year = date("Y",time());
       if($day  == -1) $day  = 1;
       if (! checkdate( $month, $day , $year) ){
-        $errmsg = "入力日付 " . $chkedStr . " が不適切です。";
+        $errmsg = sprintf($_datefield_msg['datefield_not_effective_date'], $chkedStr );
 	return $errmsg;
       }
     }
@@ -180,19 +205,18 @@ function plugin_datefield_getDateStrWithFormat($format_opt,$yyyy,$mm,$dd ){
   return $strWithFormat;
 }
 
-// Javasciptを用いること、<form>タグにname属性を用いることを通知する
+// header宣言の中で以下の２つの定義を行う
+// ・Javasciptを用いること、
+// ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
 function plugin_datefield_headDeclaration() {
-  global $html_transitional, $head_tags;
+  global $html_transitional, $javascript;
   
   // XHTML 1.0 Transitional
   $html_transitional = TRUE;
 
   // <head> タグ内への <meta>宣言の追加
-  $meta_str =
-   " <meta http-equiv=\"content-script-type\" content=\"text/javascript\" /> ";
-  if(! in_array($meta_str, $head_tags) ){
-    $head_tags[] = $meta_str;
-  }
+  $javascript = TRUE;
+
 }
 
 
@@ -273,8 +297,8 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
   $body .= <<<EOD
     <form name="subClndr$number" action="$script_enc"
     method='post' style="margin:0;">
+    <div style="white-space:nowrap; ">
     <a id="datefield_no_$number">
-    <div  style="white-space:nowrap; ">
     <input type="text" name="infield" value="$value" size="{$field_size}"
     onchange="this.form.submit();" />
     <input type="button" value="…"
@@ -283,8 +307,8 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt) {
       <input type="hidden" name="refer" value="$page_enc" />
       <input type="hidden" name="plugin" value="datefield" />
       <input type="hidden" name="number" value="$number" />
-    </div>
     </a>
+    </div>
     </form>
 EOD;
   return $body;

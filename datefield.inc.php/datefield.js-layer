@@ -1,5 +1,5 @@
 /* *******************************************************************
- * datefield-lay.js : modified by jjyun (2003) Layer-Ver.0.7.2
+ * datefield-lay.js : modified by jjyun (2003-2004) Layer-Ver.1.0
  *   based on calendar.js : by Toshirou Takahashi 
  * ------------------------------------------------------------------
  * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
@@ -104,8 +104,21 @@ function dspCalendar(obj, event, dateFormatType, diffMonth,
   dspCalendar.footHTML = '<tr>\n'
    + '  <td colspan="7" align="center" class="datefield-footer">\n'
    + '<b> ' + this.titleToday 
+
+  // 今日の日付もリンク扱いにする
+   + '<a href="javascript:function lay_v(){ ' //"
+   + 'document.' + obj.form.name + '.' + obj.name
+   + '.value=('
+   + dateWithFormat(this.dateFormatType, this.nowyear, this.nowmonth, this.nowdate )+ ');'
+   + 'stop_event__dragLay(); '
+   + 'document.' + obj.form.name + '.submit();'
+   + 'setDivVisibility(\'calendar\',false); };lay_v()" >\n'
+
    +  dateWithFormat( this.dateFormatType ,
         this.nowyear,  this.nowmonth ,this.nowdate) + '</b>'
+
+   + '</a>'
+
    + ' </td>\n</tr>\n'
    + '<tr>\n  <td colspan="7" align="center" class="datefield-footer">\n';
 
