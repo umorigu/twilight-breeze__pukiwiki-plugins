@@ -1,0 +1,259 @@
+/* *******************************************************************
+ * dspCalendar.js : modified by jjyun (2003) SubWindow-Ver.0.5
+ *   based on calendar.js : by Toshirou Takahashi 
+ * ------------------------------------------------------------------
+ * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
+ * Support http://www.fureai.or.jp/~tato/JS/BOOK/INDEX.HTM
+ * ------------------------------------------------------------------
+ *
+ * other refference pages..
+ *  - http://tohoho.wakusei.ne.jp/js/
+ *  - http://member.nifty.ne.jp/masarl/article/js-oop.html
+ *
+ * ********************************************************************  
+ */
+
+// ===================================================================
+// Functions for CrossBrowser-----------------------------------------
+// DOM: 1=NN4, 2=IE4, 3=IE5+, 4=NN6+, 0=Others
+DOM = document.all?(document.getElementById?3:2)
+                  :(document.getElementById?4
+                  :(document.layers?1:0));
+isMOZ  = navigator.userAgent.indexOf('Gecko')!=-1 ? true : false;
+    
+// === UIコントロール部分(適宜修正してください) =====================
+
+// カレンダ出現位置の指定 (入力テキスト部分からのOffset)
+dspCalendar.offsetX =  50;
+dspCalendar.offsetY = -30;
+
+// カレンダの大きさの指定 
+dspCalendar.width  = 160;
+dspCalendar.height = 220;
+if(isMOZ)
+  dspCalendar.height = 190;
+  
+// ===================================================================
+
+// クラス変数
+dspCalendar.calendarWindow = false;
+dspCalendar.dateFormatType = "";
+dspCalendar.obj = "";
+
+// カレンダー構築用HTML(ヘッダー)
+dspCalendar.headHTML = 
+  '<?xml version="1.0" encoding="EUC-JP"?> \n'
+  + '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" \n'
+  + ' "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"> \n'
+  + '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja"> \n'
+  + '<head> \n'
+  + ' <meta http-equiv="content-type" \n'
+  + '  content="application/xhtml+xml; charset=UTF-8" /> \n'
+  + ' <meta http-equiv="content-style-type" content="text/css" /> \n'
+  + ' <title>Calendar</title>\n '
+  + ' <link rel="stylesheet" href="skin/default.ja.css" \n'
+  + '  type="text/css" media="screen" charset="shift_jis" /> \n'
+  + ' <link rel="stylesheet" href="skin/user.ja.css" \n'
+  + '  type="text/css" media="screen" charset="shift_jis" /> \n'
+  + ' </head>\n <body class="datefield">\n'
+  + ' <div style="text-align: center;"> \n'
+  + ' <table border="0" width="140" class="datefield" > \n';
+
+function dspCalendar(obj, event, dateFormatType, diffMonth){
+  
+  if(dspCalendar.obj == ""){
+    dspCalendar.obj = obj;
+  }
+
+  if(!arguments[2]){
+    dspCalendar.dateFormatType = '\'YYYY/MM/DD\'';
+  } else {
+    dspCalendar.dateFormatType = '\''+ dateFormatType + '\'';
+  }
+  if(!arguments[3])this.diffMonth = 0;
+  else this.diffMonth += diffMonth;
+
+  // Window 作成時のみ値を設定するもの
+  if(!dspCalendar.calendarWindow.document){
+    // 現在の時間情報の取得
+    this.now =  new Date();
+    this.nowyear  = this.now.getFullYear();
+    this.nowmonth = this.now.getMonth() ;
+    this.nowdate  = this.now.getDate(); 
+
+    var browserLang;
+    if( DOM==2 || DOM==3 ){ 
+      browserLang = window.navigator.browserLanguage; // (IE4)
+    }else if( DOM==4 ){
+      browserLang = window.navigator.language;        // (NN4)
+    }else{
+      browserLang = "en";
+    }
+
+    // 週の設定
+    if( browserLang.search(/ja/i) != -1 ) {
+      this.week = new Array('日','月','火','水','木','金','土');
+    } else {
+      this.week = new Array('Sun','Mon','Tue','Wed','Thr','Fri','Sat');
+    }
+
+    // カレンダー構築用HTML(フッター)
+    // ステータス行 日付タイプ
+    var footHTML = '<tr>\n'
+      + '  <td colspan="7" align="center" style="font-size:13px">\n'
+      + '<b>'+ dspCalendar.dateFormatType ;
+    footHTML += '</b>\n </td>\n </tr>\n\n'
+      + '</table>\n </div> \n </body>\n </html>\n';
+    dspCalendar.footHTML = footHTML;
+
+    var x = event.screenX + dspCalendar.offsetX;
+    var y = event.screenY + dspCalendar.offsetY;
+    mkSubWin('','calendar',x, y, dspCalendar.width, dspCalendar.height);
+  }
+
+  // カレンダ表示月基準日情報
+  var cldrDate = new Date(this.nowyear, this.nowmonth + this.diffMonth , 1);
+
+  // カレンダー表示月情報の取得とタイトルの作成
+  var dspYYYY = cldrDate.getFullYear();
+  var dspMM  = cldrDate.getMonth();
+  var tDspMM = dspMM+1;
+  var tDspMM = ( tDspMM < 10 ) ? "0" + tDspMM : tDspMM ; 
+  var titleDspMonth = dspYYYY + '/' + tDspMM;
+
+  // カレンダー構築用HTML(ヘッダ付与)
+  var cldrHTML = dspCalendar.headHTML;
+
+  // カレンダー構築用HTML(動的変更部分): Month
+  cldrHTML += '<tr class="datefield-month" > \n';
+  cldrHTML += '<th colspan="7" align="center">\n';
+  cldrHTML += '<input type="button" value="&lt;&lt;"';
+  cldrHTML += ' onclick="self.opener.dspCalendar(self.opener.document.';
+  cldrHTML +=  obj.form.name + '.' + obj.name ;
+  cldrHTML += ' ,null, ' + dspCalendar.dateFormatType + ', -1)" />\n';
+  cldrHTML += titleDspMonth + '\n';
+  cldrHTML += '<input type="button" value="&gt;&gt;"';
+  cldrHTML += ' onclick="self.opener.dspCalendar(self.opener.document.';
+  cldrHTML +=  obj.form.name + '.' + obj.name ;
+  cldrHTML += ' ,null, ' + dspCalendar.dateFormatType + ', 1);" />\n';
+  cldrHTML += ' </th>\n';
+  cldrHTML += '</tr>\n';
+
+  // カレンダー構築用HTML(動的変更部分) : Week
+  cldrHTML += ' <tr> \n';
+  for (i=0;i<7;i++){
+    cldrHTML += '    <td class="datefield-week" >';
+    cldrHTML += this.week[i] + '</td>\n';
+  }
+  cldrHTML += '  </tr>\n';
+
+  // カレンダー構築用HTML(動的変更部分) : Date
+  //  - 表示月のカレンダーの最初の日曜日にあたる日付の取得
+  cldrDate.setDate( -(cldrDate.getDay()-1) );
+  var wrtDate =
+    new Date(cldrDate.getFullYear(),cldrDate.getMonth(),cldrDate.getDate());
+
+  var stdTime = cldrDate.getTime();
+  var wrtDD, wrtMM, wrtYY, wrtYYYY;
+  for(weekcnt=0;weekcnt<6;weekcnt++){
+    cldrHTML += '   <tr>\n';
+
+    for(daycnt=0;daycnt<7;daycnt++){
+       // setTime を用いて基準日から1日単位にずらす。
+       // setTime で取扱う単位はミリ秒単位(setDate()を差分情報では扱えられない)
+       wrtDate.setTime(stdTime + (weekcnt*7 + daycnt) * (24*60*60*1000)); 
+       wrtDD   = wrtDate.getDate();
+       wrtMM   = wrtDate.getMonth();
+       wrtYYYY = wrtDate.getFullYear();
+
+       if( wrtYYYY == this.nowyear &&
+           wrtMM == this.nowmonth &&
+           wrtDD == this.nowdate  ){
+            cldrHTML += '  <td class="datefield-now" >\n';
+       }else if(wrtYYYY == dspYYYY &&
+                  wrtMM == dspMM ){
+	    cldrHTML += '  <td class="datefield-samemonth" >\n';
+       }else{ 
+            cldrHTML += '  <td class="datefield-diffmonth" >\n';
+       }
+
+       cldrHTML += '<a href="javascript:function v(){ ';
+       cldrHTML += "self.opener.document.";
+       cldrHTML += obj.form.name + "." + obj.name;
+       cldrHTML += '.value=(';
+       cldrHTML += dateWithFormat(wrtYYYY, wrtMM, wrtDD );
+       cldrHTML += '); self.opener.document.' + obj.form.name + '.submit();';
+       cldrHTML += 'self.close()};v()" >\n';
+       cldrHTML += wrtDD + '</a> </td>\n';
+    }
+    cldrHTML += '</tr>\n';
+  }
+
+  // カレンダー構築用HTML(フッタ付与)
+  cldrHTML += dspCalendar.footHTML;
+
+
+  if(!dspCalendar.calendarWindow.document){
+  }
+  //
+  dspCalendar.calendarWindow.document.charset="EUC-JP";
+  dspCalendar.calendarWindow.document.write(cldrHTML);
+  dspCalendar.calendarWindow.document.close();
+  dspCalendar.calendarWindow.focus();
+
+ }
+
+ /********************************************************************
+  * 指定形式に沿った日付文字列の作成
+  *  Syntax : dateWithFormat(wrtYYYY , wrtMM , wrtDD )
+  *  例     : dateWithFormat('YYYY/MM/DD', 2003 , 10 , 3 )
+  *  注意   : Global変数である dspCalendarが設定されていること
+  * ------------------------------------------------------------------
+  */
+ function dateWithFormat(wrtYYYY , wrtMM , wrtDD ){
+     var strWithFormat = "" + dspCalendar.dateFormatType;
+     var wrtYY = wrtYYYY%100;
+     wrtMM += 1;
+     if (wrtYY < 10) { wrtYY = "0" + wrtYY; }
+     if (wrtMM < 10) { wrtMM = "0" + wrtMM; }
+     if (wrtDD < 10) { wrtDD = "0" + wrtDD; }
+     strWithFormat = strWithFormat.replace(/YYYY/gi,wrtYYYY);
+     strWithFormat = strWithFormat.replace(/YY/gi,wrtYY);
+     strWithFormat = strWithFormat.replace(/MM/gi,wrtMM);
+     strWithFormat = strWithFormat.replace(/DD/gi,wrtDD);
+     
+     return strWithFormat;
+  }
+
+
+ /********************************************************************
+  * 簡易入力用ウインドウの作成
+  *  Syntax : mkSubWin(URL,winName,x,y,w,h)
+  *  例     : mkSubWin(winIndex,'test.htm','win0',100,200,150,300)
+  * ------------------------------------------------------------------
+  * from calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
+  * Support http://www.fureai.or.jp/~tato/JS/BOOK/INDEX.HTM
+  * 
+  * 上記のスクリプトに含まれている同関数を一部修正。-- 2003/11/03 jjyun
+  * ------------------------------------------------------------------
+  */
+ function mkSubWin(URL,winName,x,y,w,h){
+    var para = ""
+  + " left="     + x	 //[e4] ウィンドウの位置（画面の左端からの距離）。
+  + ",screenX=" + x     //[N4] leftと同じ。
+  + ",top="     + y     //[e4] ウィンドウの位置（画面の上端からの距離）。
+  + ",screenY=" + y     //[N4] topと同じ。
+  + ",height="  + h     //[e3/N2] ウィンドウの高さ。
+  + ",width="   + w     //[e3/N2] ウィンドウの横幅。
+  + ",directories=no" //[e3/N2] ユーザ設定ツールバーの表示。
+  + ",location=no"    //[e3/N2] 場所ツールバーの表示。
+  + ",menubar=no"     //[e3/N2] メニューバーの表示。
+  + ",resizable=yes"  //[e3/N2] リサイズを可能にする。
+  + ",status=no"     //[e3/N2] ステータスバーの表示。
+  + ",toolbar=no"    //[e3/N2] ツールバーの表示。
+  + ",scrollbars=no" //[e3/N2] スクロールバーの表示。
+  + ",dependent=yes"; //[N4] 親ウィンドウが閉じた時に子ウィンドウも閉じる。
+
+   dspCalendar.calendarWindow = window.open(URL,winName,para);
+   dspCalendar.calendarWindow.focus();
+ }

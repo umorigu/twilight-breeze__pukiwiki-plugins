@@ -1,0 +1,417 @@
+/* *******************************************************************
+ * datefield-lay.js : modified by jjyun (2003) Layer-Ver.0.5
+ *   based on calendar.js : by Toshirou Takahashi 
+ * ------------------------------------------------------------------
+ * calendar.js Copyright(c)1999 Toshirou Takahashi tato@fureai.or.jp
+ * Support http://www.fureai.or.jp/~tato/JS/BOOK/INDEX.HTM
+ * ------------------------------------------------------------------
+ *
+ * other refference pages..
+ *  - http://tohoho.wakusei.ne.jp/js/
+ *  - http://member.nifty.ne.jp/masarl/article/js-oop.html
+ *  - http://www.amanojaku.net/jsmemo/dragimg.html
+ *  - http://www.din.or.jp/~hagi3/JavaScript/JSTips/Default.htm
+ *
+ ********************************************************************
+ */
+// カレンダ出現位置の調整 (入力テキスト部分からのOffset)
+dspCalendar.offsetX = 50;
+dspCalendar.offsetY = 30;
+
+// ===================================================================
+// Layer Version 用コード
+// DOM= 0 or 1 はこのスクリプトでは対応外とします。
+// Functions for CrossBrowser-----------------------------------------
+var DOM, isMOZ;
+// DOM: 1=NN4, 2=IE4, 3=IE5+, 4=NN6+, 0=Others
+DOM = document.all?(document.getElementById?3:2)
+                  :(document.getElementById?4
+                  :(document.layers?1:0));
+isMOZ  = navigator.userAgent.indexOf('Gecko')!=-1 ? true : false;
+
+
+if(document.layers){
+  document.captureEvents(Event.MOUSEMOVE);
+  document.captureEvents(Event.MOUSEUP);
+}
+dragLay.layName='calendar';
+dragLay[dragLay.layName] = new dragLay(dragLay.layName,-100,-100);
+
+function dspCalendar(obj, event, dateFormatType, diffMonth){
+
+  setDivVisibility(dragLay.layName,true);
+  stop_event__dragLay(); // イベントキャプチャーリセット
+  set_event__dragLay(); // イベントキャプチャースタート
+
+
+  if(!arguments[2]){
+    this.dateFormatType = '\'YYYY/MM/DD\'';
+  } else {
+    this.dateFormatType = '\''+ dateFormatType + '\'';
+  }
+  if(!arguments[3])this.diffMonth = 0;
+  else this.diffMonth += diffMonth;
+
+  // 現在の時間情報の取得
+  this.now =  new Date();
+  this.nowyear  = this.now.getFullYear();
+  this.nowmonth = this.now.getMonth() ;
+  this.nowdate  = this.now.getDate(); 
+  
+  var browserLang;
+  if( DOM==2 || DOM==3 )
+    browserLang = window.navigator.browserLanguage;
+  else if( DOM==4 )
+    browserLang = window.navigator.language.substr(0,2);
+  else
+    browserLang = "en";
+
+  // 週の設定
+  if( browserLang.search(/ja/i) != -1 && "あ".length == 1 ) {
+    this.week = new Array('日','月','火','水','木','金','土');
+    this.titleToday = '今日：';
+  } else {
+    this.week = new Array('Sun','Mon','Tue','Wed','Thr','Fri','Sat');
+    this.titleToday = 'Today:';
+  }
+
+  // カレンダー構築用HTML(ヘッダー)
+  dspCalendar.headHTML = '  <form>\n'
+    + '  <table border="0" width="140" class="datefield"> \n';
+
+  // カレンダー構築用HTML(フッター)
+  // ステータス行 日付タイプ
+  dspCalendar.footHTML = '<tr>\n'
+   + '  <td colspan="7" align="center" style="font-size:13px">\n'
+   + '<b>' + dateWithFormat( this.dateFormatType ,
+    	      this.nowyear,  this.nowmonth ,this.nowdate) + '</b><br />'
+   + '<input type="button" value="close" \n'
+   + 'onclick="setDivVisibility(\'calendar\',false); '
+   + 'stop_event__dragLay(); "> \n'
+   + ' </td>\n'
+   + '</tr>\n\n'
+   + '</table>\n'
+   + '</form>\n';
+
+  // カレンダ表示月基準日情報
+  var cldrDate = new Date(this.nowyear, this.nowmonth + this.diffMonth , 1);
+
+  // カレンダー表示月情報の取得とタイトルの作成
+  var dspYYYY = cldrDate.getFullYear();
+  var dspMM  = cldrDate.getMonth();
+  var tDspMM = dspMM+1;
+  var tDspMM = ( tDspMM < 10 ) ? "0" + tDspMM : tDspMM ; 
+  var titleDspMonth = dspYYYY + '/' + tDspMM;
+
+  // カレンダー構築用HTML(ヘッダ付与)
+  var cldrHTML = dspCalendar.headHTML;
+
+  // カレンダー構築用HTML(動的変更部分): Month
+  cldrHTML += '<tr class="datefield-month">\n'
+   + '<th colspan="7" align="center">\n'
+   + '<input type="button" value="&lt;&lt;"'
+   + ' onclick="dspCalendar(window.document.' //"
+   +  obj.form.name + '.' + obj.name 
+   + ' ,null, ' + this.dateFormatType + ', -1)" />\n' //"
+   + titleDspMonth + '\n'
+   + '<input type="button" value="&gt;&gt;"'
+   + ' onclick="dspCalendar(window.document.' //"
+   +  obj.form.name + '.' + obj.name 
+   + ' ,null, ' + this.dateFormatType + ', 1)" />\n'  //"
+   + ' </th>\n'
+   + '</tr>\n';
+
+  // カレンダー構築用HTML(動的変更部分): Week
+  cldrHTML += ' <tr> \n';
+  for (i=0;i<7;i++){
+  cldrHTML += '     <td class="datefield-week">\n'
+    + this.week[i] +  '   </td>\n';
+  }
+  cldrHTML += '  </tr>\n';
+
+  // Date
+  //  - 表示月のカレンダーの最初の日曜日にあたる日付の取得
+  cldrDate.setDate( -(cldrDate.getDay()-1) );
+  var wrtDate =
+    new Date(cldrDate.getFullYear(),cldrDate.getMonth(),cldrDate.getDate());
+
+  var stdTime = cldrDate.getTime();
+  var wrtDD, wrtMM, wrtYY, wrtYYYY;
+  for(weekcnt=0;weekcnt<6;weekcnt++){
+    cldrHTML += '   <tr>\n';
+
+    for(daycnt=0;daycnt<7;daycnt++){
+       // setTime を用いて基準日から1日単位にずらす。
+       // setTime で取扱う単位はミリ秒単位(setDate()を差分情報では扱えられない)
+       wrtDate.setTime(stdTime + (weekcnt*7 + daycnt) * (24*60*60*1000)); 
+       wrtDD   = wrtDate.getDate();
+       wrtMM   = wrtDate.getMonth();
+       wrtYYYY = wrtDate.getFullYear();
+       wrtDay  = wrtDate.getDay();
+
+       if( wrtYYYY == this.nowyear  &&
+             wrtMM == this.nowmonth &&
+             wrtDD == this.nowdate  ){
+         cldrHTML += '   <td class="datefield-now">\n';
+       }else if(wrtYYYY == dspYYYY &&
+                  wrtMM == dspMM ){
+//	      if(wrtDay == 0) cldrHTML += dspCalendar.dateSunBgColor;
+//  	 else if(wrtDay == 6) cldrHTML += dspCalendar.dateSatBgColor;
+//       else                 cldrHTML += dspCalendar.dateSameMonthBgColor;
+         cldrHTML += '   <td class="datefield-samemonth">\n';
+       }else{ 
+         cldrHTML += '   <td class="datefield-diffmonth">\n';
+       }
+
+       cldrHTML += '<a href="javascript:function lay_v(){ ' //"
+	 + 'document.' + obj.form.name + '.' + obj.name
+	 + '.value=('
+	 + dateWithFormat(this.dateFormatType, wrtYYYY, wrtMM, wrtDD )+ ');'
+         + 'stop_event__dragLay(); '
+	 + 'document.' + obj.form.name + '.submit();'
+         + 'setDivVisibility(\'calendar\',false); };lay_v()" >\n' //"
+	 + wrtDD + '</a> </td>\n';
+    }
+    cldrHTML += '</tr>\n';
+  }
+
+  // カレンダー構築用HTML(フッタ付与)
+  cldrHTML += dspCalendar.footHTML;
+
+  dragLay[dragLay.layName].outputDivHTML(getDivFromName(dragLay.layName),'');//一時クリア
+  dragLay[dragLay.layName].outputDivHTML(getDivFromName(dragLay.layName),cldrHTML);
+
+  if(event!=null){
+    var left, top;
+    left = getPageX(event) + dspCalendar.offsetX;
+    top  = getPageY(event) + dspCalendar.offsetY;
+    dragLay[dragLay.layName].moveDivPos(getDivFromName(dragLay.layName),left,top);
+  }
+  
+}
+
+/********************************************************************
+ * 指定形式に沿った日付文字列の作成
+ *  Syntax : dateWithFormat(dateFormatType , wrtYYYY , wrtMM , wrtDD )
+ *  例     : dateWithFormat('YYYY/MM/DD', 2003 , 10 , 3 )
+ * ------------------------------------------------------------------
+ */
+function dateWithFormat(dateFormatType , wrtYYYY , wrtMM , wrtDD ){
+  var strWithFormat = "" + dateFormatType;
+  var wrtYY = wrtYYYY%100;
+  wrtMM += 1;
+  if (wrtYY < 10) { wrtYY = "0" + wrtYY; }
+  if (wrtMM < 10) { wrtMM = "0" + wrtMM; }
+  if (wrtDD < 10) { wrtDD = "0" + wrtDD; }
+  strWithFormat = strWithFormat.replace(/YYYY/gi,wrtYYYY);
+  strWithFormat = strWithFormat.replace(/YY/gi,wrtYY);
+  strWithFormat = strWithFormat.replace(/MM/gi,wrtMM);
+  strWithFormat = strWithFormat.replace(/DD/gi,wrtDD);
+  
+  return strWithFormat;
+}
+
+
+
+/********************************************************************
+ * ドラッグ可能なレイヤーの作成
+ *  Syntax : dragLay(layName , x , y )
+ *  例     : dragLay('calendar', 100 , 100 )
+ * ------------------------------------------------------------------
+ */
+
+function dragLay(layName,x,y){
+  this.id      = layName;   // ドラッグできるようにするレイヤー名
+  this.x       = x;         // 初期left位置
+  this.y       = y;         // 初期top位置
+  if(DOM<=1)return null;
+  else { //n4以外用
+    this.div='<div  id="'+layName+'" class="dragLays"\n'
+      + '      onmousedown="clickElement=\''+layName
+      +'\';mdown_dragLay(event);return false"\n'
+      + '      style="position:absolute;left:'+x+'px;top:'+y+'px">\n'
+      + '</div>\n';
+    document.write(this.div);
+  }
+  initDivPos(getDivFromName(layName));
+}
+
+dragLay.prototype.moveDivPos   = moveDivPos;      //メソッドを追加する
+dragLay.prototype.setDivZIndex = setDivZIndex;    //メソッドを追加する
+dragLay.prototype.outputDivHTML= outputDivHTML;   //メソッドを追加する
+dragLay.offsetX = 0;
+dragLay.offsetY = 0;
+dragLay.zcount  = 0;
+
+/* **************** */
+
+function initDivPos(div){
+  if(DOM==4){
+    div.style.left=div.offsetLeft+'px';
+    div.style.top =div.offsetTop +'px';
+  } else if(DOM==2 || DOM==1){
+    div.style.pixelLeft=div.offsetLeft;
+    div.style.pixelTop =div.offsetTop;
+  }
+  return div;
+}
+
+
+function getDivFromName(idName){
+  if(DOM>=3)
+    return document.getElementById(idName);
+  if(DOM==2)
+    return document.all(idName);
+  if(DOM==1){
+    var s = '';
+    for(var i=1; i<arguments.length; i++)
+      s += 'document.layers.'+arguments[i]+'.';
+    return eval(s+'document.layers.'+idName);
+  }
+  return null;
+}
+
+function getDivLeft(div){
+  if(DOM>=3) return div.offsetLeft;
+  if(DOM==2) return div.style.pixelLeft;
+  if(DOM==1) return div.left;
+  return 0;
+}
+
+function getDivTop(div){
+  if(DOM>=3) return div.offsetTop;
+  if(DOM==2) return div.style.pixelTop;
+  if(DOM==1) return div.top;
+  return 0;
+}
+
+function getPageX(e){
+  if(window.opera)
+    return e.clientX;
+  if(DOM==4)
+    return e.clientX+window.scrollX;
+  if(DOM==3 || DOM==2)
+    return document.body.scrollLeft+window.event.clientX;
+  if(DOM==1)
+    return e.pageX;
+  return 0;
+}
+
+function getPageY(e){
+  if(window.opera)
+    return e.clientY;
+  if(DOM==4)
+    return e.clientY+window.scrollY;
+  if(DOM==3 || DOM==2)
+    return document.body.scrollTop+window.event.clientY;
+  if(DOM==1)
+    return e.pageY;
+  return 0;
+}
+
+// -- レイヤの表示属性の設定
+function setDivVisibility(idName,visible){
+  var div=getDivFromName(idName);
+  if(DOM==4 || DOM==3 || DOM==2 || DOM==1){
+    div.style.visibility=(visible)?'visible':'hidden';
+    return;
+  }
+}
+
+
+// -- 奥行き表示の設定
+function setDivZIndex(div,order){
+  if(DOM==4 || DOM==2 || DOM==1){
+    div.style.zIndex=order;
+    return;
+  }
+  if(DOM==3){
+    div.zIndex=order;
+    return;
+  }
+}
+
+/* **************** */
+
+
+function outputDivHTML(div,html){
+  if(DOM>=2) div.innerHTML=html;
+  if(DOM==1) {
+    open();
+    write(html);
+    close();
+  }
+}
+
+function moveDivPos(div,movetoX,movetoY){
+  if(DOM==4 || window.opera){
+    div.style.left = movetoX + 'px';
+    div.style.top  = movetoY + 'px';
+  }
+  if(DOM==3 || DOM==2){
+    div.style.pixelLeft = movetoX;
+    div.style.pixelTop  = movetoY;
+  }
+  if(DOM==1){
+    div.moveTo(movetoX, movetoY);
+  }
+  return false;
+}
+
+function mmove_dragLay(e) {
+  if(!window.clickElement) return false;
+  var selected = getDivFromName(clickElement);
+  if (selected) {
+    var movetoX = getPageX(e) - dragLay.offsetX;
+    var movetoY = getPageY(e) - dragLay.offsetY;
+    dragLay[clickElement].moveDivPos(selected,movetoX,movetoY);
+  }
+  return false;
+}
+
+
+//--マウスボタンを押し下げた時
+//  レイヤー内のカーソルoffset位置取得
+function mdown_dragLay(e) {
+  if(isMOZ){   //n6,m1用
+    if(e.currentTarget.className != 'dragLays') return false;
+    else clickElement = e.currentTarget.id;
+  }
+  if(!window.clickElement) return false;
+  var selected = getDivFromName(clickElement);
+  if(selected){
+    dragLay.offsetX = getPageX(e) - getDivLeft(selected);
+    dragLay.offsetY = getPageY(e) - getDivTop(selected);
+  }
+}
+
+//--マウスボタンを上げた時ドラッグ解除
+function mup_dragLay(e) {
+  if(!window.clickElement) return false;
+  var selected = getDivFromName(clickElement);
+  if(selected) {
+    setDivZIndex(selected, dragLay.zcount++);
+    clickElement=null;
+  }
+  return false;
+}
+
+//--イベントキャプチャー開始
+function set_event__dragLay(){
+  document.onmousemove = mmove_dragLay;
+  document.onmouseup = mup_dragLay;
+  if(isMOZ)   //m1,n6用
+    document.onmousedown = mdown_dragLay;
+}
+
+//--イベントキャプチャー停止
+function stop_event__dragLay(){
+  document.onmousemove = null;
+  document.onmouseup   = null;
+  if(isMOZ )
+    document.onmousedown = null;
+
+  dragLay.offsetX=0;
+  dragLay.offsetY=0;
+  dragLay.zcount=0;
+}
