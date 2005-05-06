@@ -240,56 +240,39 @@ function plugin_tracker_plus_action()
 // フィールドオブジェクトを構築する
 function plugin_tracker_plus_get_fields($base,$refer,&$config)
 {
-   global $now,$_tracker_messages;
+	global $now,$_tracker_messages;
 
-   $fields = array();
-   // 予約語
-   foreach (array(
- 		 '_date'=>'text',    // 投稿日時
- 		 '_update'=>'date',  // 最終更新
- 		 '_past'=>'past',    // 経過(passage)
- 		 '_page'=>'page',    // ページ名
- 		 '_name'=>'text',    // 指定されたページ名
- 		 '_real'=>'real',    // 実際のページ名
- 		 '_refer'=>'page',   // 参照元(フォームのあるページ)
- 		 '_base'=>'page',    // 基準ページ
- 		 '_submit'=>'submit_plus', // 追加ボタン
- 		 ) as $field=>$class)
-     {
-       $class = 'Tracker_field_'.$class;
-       $fields[$field] = &new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
-     }
+	$fields = array();
+	// 予約語
+	foreach (array(
+                 '_date'=>'text',    // 投稿日時
+                 '_update'=>'date',  // 最終更新
+                 '_past'=>'past',    // 経過(passage)
+                 '_page'=>'page',    // ページ名
+                 '_name'=>'text',    // 指定されたページ名
+                 '_real'=>'real',    // 実際のページ名
+                 '_refer'=>'page',   // 参照元(フォームのあるページ)
+                 '_base'=>'page',    // 基準ページ
+                 '_submit'=>'submit_plus', // 追加ボタン
+                 ) as $field=>$class)
+	{
+		$class = 'Tracker_field_'.$class;
+		$fields[$field] = &new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
+	}
 
-   foreach ($config->get('fields') as $field)
-     {
-       // 0=>項目名 1=>見出し 2=>形式 3=>オプション 4=>デフォルト値
-       $class = 'Tracker_field_'.$field[2];
-       if (!class_exists($class))
- 	{ // デフォルト
- 	  $class = 'Tracker_field_text';
- 	  $field[2] = 'text';
- 	  $field[3] = '20';
- 	}
-       $fields[$field[0]] = &new $class($field,$base,$refer,$config);
-     }
-   return $fields;
-
-
-//   $fields = array();
-//   $fields = plugin_tracker_get_fields($base,$refer,$config);
-
-// //対象となる変数情報を文字列として取得
-// ob_start();
-// var_dump($fields);
-// $ret = ob_get_contents();
-// ob_end_clean();
-
-// //任意のファイルへ出力
-// $fp=fopen('/tmp/debug_stream.log','a');
-// fwrite($fp,$ret);
-// fclose($fp);
-
-  return $fields;
+	foreach ($config->get('fields') as $field)
+	{
+		// 0=>項目名 1=>見出し 2=>形式 3=>オプション 4=>デフォルト値
+		$class = 'Tracker_field_'.$field[2];
+		if (!class_exists($class))
+		{ // デフォルト
+			$class = 'Tracker_field_text';
+			$field[2] = 'text';
+			$field[3] = '20';
+		}
+		$fields[$field[0]] = &new $class($field,$base,$refer,$config);
+	}
+	return $fields;
 }
 
 
@@ -938,15 +921,6 @@ EOF;
 
 function plugin_tracker_plus_get_source($page)
 {
-ob_start();
-print_r("plugin_tracker_plus_get_source- in -");
-$ret = ob_get_contents();
-ob_end_clean();
-
-//任意のファイルへ出力
-$fp=fopen('/tmp/debug_stream.log','a');
-fwrite($fp,$ret);
-fclose($fp);
 	return plugin_tracker_get_source($page);
 }
 
