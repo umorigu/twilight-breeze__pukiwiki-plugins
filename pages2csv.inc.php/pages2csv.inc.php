@@ -2,21 +2,21 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.81 2005/01/24 23:04:33 jjyun Exp $
+// $Id: pages2csv.inc.php,v 0.9 2005/05/06 17:43:23 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
 define('PLUGIN_PAGES2CSV_UPLOAD_ADMIN_ONLY',FALSE); // FALSE or TRUE
 /////////////////////////////////////////////////
 
-require_once( PLUGIN_DIR . 'tracker.inc.php');
+require_once( PLUGIN_DIR . 'tracker_plus.inc.php');
 require_once( PLUGIN_DIR . "attach.inc.php");
 
 function plugin_pages2csv_init()
 {
-	if (function_exists('plugin_tracker_init'))
+	if (function_exists('plugin_tracker_plus_init'))
 	{
-		plugin_tracker_init();
+		plugin_tracker_plus_init();
 	}
   
 	$messages = array(
@@ -229,7 +229,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 				'msg' => "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>",
 				);
 		}
-		$list_filter = &new Tracker_list_filter($filter_config, $filter_name);
+		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
 	}
 	unset($filger_config);
 
@@ -353,7 +353,7 @@ function plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order='', $limi
 }
 
 // CSV用一覧クラス
-class Pages2csv_Tracker_csvlist extends Tracker_list
+class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 {
 	var $extract_arg_filter = NULL;
 
@@ -363,7 +363,7 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 		$cache = NULL;
 
 		// 親クラスのコンストラクタを呼び出して初期化
-		$this->Tracker_list($page,$refer,$config,$list,$filter_name,$cache);
+		$this->Tracker_plus_list($page,$refer,$config,$list,$filter_name,$cache);
 		
 		$this->extract_arg_filter = $extract_arg_filter;
 	}
@@ -408,34 +408,16 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 		// スタイル出力を除く
 		global $script;
 		
-		$field = $sort = $arr[1];
-		if ($sort == '_name' or $sort == '_page')
-		{
-			$sort = '_real';
-		}
+		$field = $arr[1];
 		if (!array_key_exists($field,$this->fields))
 		{
 			return $arr[0];
 		}
-		$dir = SORT_ASC;
-		$arrow = '';
-		$order = $this->order;
 		
-		if (array_key_exists($sort,$order))
-		{
-			$index = array_flip(array_keys($order));
-			$pos = 1 + $index[$sort];
-			$b_end = ($sort == array_shift(array_keys($order)));
-			$b_order = ($order[$sort] == SORT_ASC);
-			$dir = ($b_end xor $b_order) ? SORT_ASC : SORT_DESC;
-			$arrow = '&br;'.($b_order ? '&uarr;' : '&darr;')."($pos)";
-			unset($order[$sort]);
-		}
-
 		$title = $this->fields[$field]->title;
 
 		// リンク情報などは外して..
-		return "$title$arrow";
+		return "$title";
 	}
   
 	function toString($limit=NULL)
@@ -447,10 +429,11 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 		
 		if($limit != NULL and count($this->rows) > $limit)
 		{
-			$source = str_replace(
-					      array('$1','$2'),
-					      array(count($this->rows),$limit),
-					      $_tracker_messages['msg_limit'])."\n";
+// 			$source = str_replace(
+// 					      array('$1','$2'),
+// 					      array(count($this->rows),$limit),
+// 					      $_tracker_messages['msg_limit'])."\n";
+
 			$this->rows = array_splice($this->rows,0,$limit);
 		}
 		if(count($this->rows) == 0 )
@@ -461,11 +444,12 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 
 		foreach(plugin_tracker_get_source($this->config->page . '/' . $this->list) as $line)
 		{
-			if (preg_match('/^\|(.+)\|[hHfFcC]$/',$line) )
+			if (preg_match('/^\|(.+)\|[hH]$/',$line) )
 			{
 				// 表定義のパイプ区切りをCSV形式区切りに変更
-				$line = preg_replace('/\|/','","', $line); 
-				$line = preg_replace('/^",(.+),"h$/','$1',$line);
+			        // $line = preg_replace('/^",(.+),"|[hH]$/','$1',$line);
+			        $line = preg_replace('/\|/',',', $line); 
+			        $line = preg_replace('/\~/','', $line); 
 				
 				$source .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
 			}
@@ -479,9 +463,16 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 			}
 		}
 		
+		// create header 
+		$header_arr = array();
+		$header_arr = explode(",", $source);
+		array_shift($header_arr);
+		array_pop($header_arr);
+		$source = '"' . implode($header_arr,'","') . '"'. "\n";
+
 		foreach($this->rows as $key=>$row)
 		{ 
-			if (!TRACKER_LIST_SHOW_ERROR_PAGE and !$row['_match'])
+			if (!TRACKER_PLUS_LIST_SHOW_ERROR_PAGE and !$row['_match'])
 			{
 				continue;
 			}
@@ -499,6 +490,7 @@ class Pages2csv_Tracker_csvlist extends Tracker_list
 		}
 		return $source;
 	}
+
 }
 
 class Pages2csv_extract_arg_filter
