@@ -4,7 +4,7 @@
 //
 // Issue tracker plugin (See Also bugtrack plugin)
 // This script is modified by jjyun. (2004/02/22 - 2005/02/08) 
-//   tracker.inc.php-modified, v 1.5 2005/02/20 18:40:32 jjyun
+//   tracker.inc.php-modified, v 1.6 2005/03/19 13:15:32 jjyun
 //
 // License   : PukiWiki 本体と同じく GNU General Public License (GPL) です
 
@@ -1355,10 +1355,11 @@ class Tracker_list_filter
 
 	function filters($var)
 	{
+		$counter = 0;  
 		$condition_flag = true;
 		foreach($this->filter_conditions as $filter)
 		{
-			if($filter->is_cnctlogic_AND)
+			if($filter->is_cnctlogic_AND or $counter == 0)
 			{
 				$condition_flag = ($filter->filter($var) and $condition_flag );
 			}
@@ -1366,6 +1367,7 @@ class Tracker_list_filter
 			{  
 				$condition_flag = ($filter->filter($var)  or $condition_flag );
 			}
+			$counter++ ;
 		}
 		return $condition_flag;
 	}
