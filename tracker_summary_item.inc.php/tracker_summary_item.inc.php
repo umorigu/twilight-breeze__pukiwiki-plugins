@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: tracker_summary_item.inc.php,v 0.4 2005/02/08 00:10:02 jjyun Exp $
+// $Id: tracker_summary_item.inc.php,v 0.5 2005/05/06 17:57:02 jjyun Exp $
 //
 // License   : GNU General Public License (GPL) 
 // 
@@ -13,7 +13,7 @@ define ('TRACKER_SUMMARY_ITEM_TIME_TYPE_FILM' ,24);
 define ('TRACKER_SUMMARY_ITEM_TIME_TYPE_PAL'  ,25);
 define ('TRACKER_SUMMARY_ITEM_TIME_TYPE_NTSC' ,30);
 
-require_once( PLUGIN_DIR . 'tracker.inc.php');
+require_once( PLUGIN_DIR . 'tracker_plus.inc.php');
 
 function plugin_tracker_summary_item_convert()
 {
@@ -77,7 +77,7 @@ function plugin_tracker_summary_item_inline()
 	$list = 'list';
 	$page = $refer = $vars['page'];
 	$filter = '';
-	$cache = TRACKER_LIST_CACHE_DEFAULT;
+	$cache = TRACKER_PLUS_LIST_CACHE_DEFAULT;
 
 	if (func_num_args())
 	{
@@ -120,7 +120,7 @@ function plugin_tracker_summary_item_inline()
 }
 
 function plugin_tracker_summary_item_getsum($page, $refer, $config_name, $list,
-					    $filter_name=NULL, $cache=TRACKER_LIST_CACHE_DEFAULT,
+					    $filter_name=NULL, $cache=TRACKER_PLUS_LIST_CACHE_DEFAULT,
 					    $target_name, $input_format, $output_format )
 {
 	$isSuccess = FALSE;
@@ -159,12 +159,12 @@ function plugin_tracker_summary_item_getsum($page, $refer, $config_name, $list,
 		        $errmsg = "config file '".htmlspecialchars($config->page.'/filters')."' not found.";
 			return array( $isSuccess, $errmsg, $title , $sum);
 		}
-	        $list_filter = &new Tracker_list_filter($filter_config, $filter_name);
+	        $list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
 	}
 	unset($filter_config);
 
 	// $list 変数が別の意味で使いまわされているので注意!! (jjyun's comment)
-	$list = &new Tracker_list($page,$refer,$config,$list,$filter_name,$cache);
+	$list = &new Tracker_plus_list($page,$refer,$config,$list,$filter_name,$cache);
 
 	if($filter_name != NULL)
 	{
@@ -251,7 +251,7 @@ class Tracker_summary_item_calcuation
 		foreach($list->rows as $key=>$row)
 		{
 
-		  	if(!TRACKER_LIST_SHOW_ERROR_PAGE && !$row['_match'])
+		  	if(!TRACKER_PLUS_LIST_SHOW_ERROR_PAGE && !$row['_match'])
 			{
 				continue;
 			}
