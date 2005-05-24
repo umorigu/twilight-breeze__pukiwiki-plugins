@@ -1,8 +1,11 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 1.7 2005/05/06 17:52:05 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 1.8 2005/05/24 23:48:17 jjyun Exp $
+// Copyright (C) 
+//   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
+// License: GPL v2 or (at your option) any later version
 //
-// Issue tracker plugin (See Also bugtrack plugin)
+// Issue from tracker.inc.php plugin (See Also bugtrack plugin)
 
 require_once(PLUGIN_DIR . 'tracker.inc.php');
 
@@ -1059,7 +1062,8 @@ class Tracker_field_select2 extends Tracker_field_select
 		$arg= Tracker_plus_field_string_utility::get_argument_from_block_type_plugin_string($str);
 
 		// configページで設定された属性値と比較する
-		foreach ($this->config->get($this->name) as $option) {
+		foreach ($this->config->get($this->name) as $option)
+		{
 			// '/'文字が選択候補文字列に入っても処理できるようにescapeする
 		 	$eoption=preg_quote($option[0],'/');
 			if(preg_match("/^$eoption$/",$arg)){
@@ -1080,11 +1084,7 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 {
 	var $sort_type = SORT_REGULAR;
   
-	// (sortの適用時に、利用されている)
-	// 引数(page内の該当部分)に対して、configページのオプション指定に従って、
-	// ブロック型のプラグイン引数から指定された部分の文字列を
-	// 切り出した値を返す処理を含む
-	function get_value($value)
+	function extract_value($value)
 	{
 		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
 		  htmlspecialchars($this->values[0]) : '' ;
@@ -1103,15 +1103,18 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 		$arg = Tracker_plus_field_string_Utility::get_argument_from_plugin_string(
 			    $value, $extract_arg_num, $target_plugin_name, $target_plugin_type);
 
-		// 抽出した位置の引数に対して、さらに正規表現による抽出指定があればそれを行う
-		if( $expatern_with_argument != null && 
-		    preg_match("/$expatern_with_argument/",$arg,$match) )
-		{
-			$arg = $match[1];
-		}
-
 		return $arg;
 	}
+
+	// (sortの適用時に、利用されている)
+	// 引数(page内の該当部分)に対して、configページのオプション指定に従って、
+	// ブロック型のプラグイン引数から指定された部分の文字列を
+	// 切り出した値を返す処理を含む
+	function get_value($value)
+	{
+		return $this->extract_value($value);
+	}
+	  
 	// 引数(page内の該当部分)に対して、
 	// configページのオプション指定に従って切り出した値を返し、
 	// page内の該当部分にconfigページの属性値一覧で定義した要素が含まれれば、
@@ -1119,7 +1122,7 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 	function get_key($str)
 	{
 		// 引数(page内の該当部分)に対して、configページのオプション指定に従って切り出す。
-		$str= $this->get_value($str);
+		$str= $this->extract_value($str);
 		foreach ($this->config->get($this->name) as $option)
 		{
 			// '/'文字が選択候補文字列に入っても処理できるようにescapeする
@@ -1137,7 +1140,7 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
 	// その見出しの値を返す(tracker_list表示で、利用されている)
 	function format_cell($str)
 	{
-		return $this->get_value($str);
+		return $this->extract_value($str);
 	}
 	// Pageへ転記する際の値を返す
 	function format_value($value,$post)
@@ -1169,7 +1172,7 @@ class Tracker_field_hidden3 extends Tracker_field_hidden2
 	// 引数(page内の該当部分)に対して、configページのオプション指定に従って、
 	// ブロック型のプラグイン引数から指定された部分の文字列を
 	// 切り出した値を返す処理を含む
-	function get_value($value)
+	function extract_value($value)
 	{
 		$extract_arg_num = (array_key_exists(0,$this->values) and is_numeric($this->values[0])) ?
 		  htmlspecialchars($this->values[0]) : '' ;
@@ -1188,11 +1191,22 @@ class Tracker_field_hidden3 extends Tracker_field_hidden2
 		$arg = Tracker_plus_field_string_Utility::get_argument_from_plugin_string(
 			    $value, $extract_arg_num, $target_plugin_name, $target_plugin_type);
 
-		// 抽出した位置の引数に対して、さらに正規表現による抽出指定があればそれを行う
+		// 抽出した文字列から数値である部分のみを抽出し、ソートや表示の処理対象とする
 		$arg = (preg_match("/(\d+)/",$arg,$match) ) ? $match[1] : 0;
 
 		return $arg;
 	}
+}
+
+class Tracker_field_hiddenForSelect extends Tracker_field_hidden2
+{
+	var $sort_type = SORT_NUMERIC;
+
+	function get_value($value)
+	{
+		return Tracker_field_select2::get_value($value);
+	}
+
 }
 
 class Tracker_field_submit_plus extends Tracker_field
