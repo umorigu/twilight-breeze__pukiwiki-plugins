@@ -1198,7 +1198,7 @@ class Tracker_field_hidden3 extends Tracker_field_hidden2
 	}
 }
 
-class Tracker_field_hiddenForSelect extends Tracker_field_hidden2
+class Tracker_field_hidden2select extends Tracker_field_hidden2
 {
 	var $sort_type = SORT_NUMERIC;
 
