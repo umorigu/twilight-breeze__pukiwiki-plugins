@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 1.8 2005/05/24 23:48:17 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 1.82 2005/05/31 00:46:17 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -934,7 +934,7 @@ class Tracker_plus_list_filter
 	var $filter_name;
 	var $filter_conditions = array();
   
-	function Tracker_list_filter($filter_config, $filter_name)
+	function Tracker_plus_list_filter($filter_config, $filter_name)
 	{
 		$this->filter_name = $filter_name;
 		foreach( $filter_config->get($filter_name) as $filter )
@@ -971,7 +971,7 @@ class Tracker_plus_list_filterCondition
 	var $is_exclued;
 	var $is_cnctlogic_AND;
   
-	function Tracker_list_filterCondition($field,$name)
+	function Tracker_plus_list_filterCondition($field,$name)
 	{
 		$this->name = $name;
 		$this->is_cnctlogic_AND = ($field[0] == "かつ") ? true : false ;
@@ -999,6 +999,7 @@ class Tracker_plus_list_filterCondition
 		return $str;
 	}
 }
+
 class Tracker_field_select2 extends Tracker_field_select
 {
 	var $sort_type = SORT_NUMERIC;
