@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 0.9 2005/05/06 17:43:23 jjyun Exp $
+// $Id: pages2csv.inc.php,v 1.0 2005/07/02 23:21:21 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -386,10 +386,21 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 				$str = $this->extract_arg_filter->extracts($str);
 			}
 
-			//	  if (array_key_exists($name,$this->fields))
+ 			if ( $name == '_update' || $name == '_past' )
+ 			{
+ 				$str = $this->fields[$name]->format_cell($str);
+ 			}
+			
+			// ////////////////////////////////////////////////////
+			//  If you want to get same contents of tracker_list,
+			//  you shuold comment above condition branch out,
+			//  utilize below condition branch. .. it may be good :-)
+			//
+			//  if (array_key_exists($name,$this->fields))
 			//  {
 			//    $str = $this->fields[$name]->format_cell($str);
 			//  }
+
 		}
 		else
 		{
@@ -429,11 +440,6 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 		
 		if($limit != NULL and count($this->rows) > $limit)
 		{
-// 			$source = str_replace(
-// 					      array('$1','$2'),
-// 					      array(count($this->rows),$limit),
-// 					      $_tracker_messages['msg_limit'])."\n";
-
 			$this->rows = array_splice($this->rows,0,$limit);
 		}
 		if(count($this->rows) == 0 )
