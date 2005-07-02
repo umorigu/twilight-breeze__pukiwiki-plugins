@@ -2,12 +2,14 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.6 2004/12/31 17:11:02 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.7 2005/07/02 12:24:34 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 
 // 修正後のリロード時に、編集箇所へ表示箇所を移す
 // 有効にする場合には、TRUE , 無効にする場合には FALSE を指定
 define('LISTBOX3_JUMP_TO_MODIFIED_PLACE',TRUE); // TRUE or FALSE
+// リストアイテムに書式を適用する(色指定のみ)
+define('LISTBOX3_APPLY_FORMAT',TRUE); // TRUE or FALSE
 
 function plugin_listbox3_action() {
   global $script, $vars;
@@ -83,7 +85,7 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname) {
     <form action="$script_enc" method="post" style="margin:0;"> 
     <a id="listbox3_no_$number">
     <div>
-    <select name="value" style="vertical-align:middle;" onchange="this.form.submit();">
+    <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
     $options_html
     </select>
     <input type="hidden" name="number" value="$number" />
@@ -108,16 +110,21 @@ function plugin_listbox3_getOptions($value, $config_name, $field_name) {
   }
   $config->name = $config_name;
 
+
   $isSelect = 0;
   foreach($config->get($field_name) as $options) {
     $s_option=$options[0];
+    $s_format=$options[1];
     if($s_option == '') continue;
+
+    $option_fmt = ( LISTBOX3_APPLY_FORMAT ) ? plugin_listbox3_getStyle($s_format) : '';
+
     $option_enc = htmlspecialchars($s_option);
     if($value == $s_option) {
       $isSelect = 1;
-      $options_html .= "<option value='$option_enc' selected='selected'>$option_enc</option>";
+      $options_html .= "<option value='$option_enc' style='$option_fmt' selected='selected'>$option_enc</option>";
     } else {
-      $options_html .= "<option value='$option_enc'>$option_enc</option>";
+      $options_html .= "<option value='$option_enc' style='$option_fmt' >$option_enc</option>";
     }
   }
   
@@ -127,4 +134,26 @@ function plugin_listbox3_getOptions($value, $config_name, $field_name) {
   }
   return $options_html;
 }
+
+function plugin_listbox3_getStyle($s_format) {
+  
+  if( $s_format == '')
+    return '';
+  
+  $format_enc = htmlspecialchars($s_format);
+  $format_enc = preg_replace("/\%s/", '', $format_enc);
+  
+  $matches=array();
+  while ( preg_match('/^(?:(BG)?COLOR\(([#\w]+)\)):(.*)$/', $format_enc, $matches))
+  {
+    if ($matches[0])
+      {
+	$style_name = $matches[1] ? 'background-color' : 'color';
+	$opt_format .= $style_name . ':' . htmlspecialchars($matches[2]) . ';';
+	$format_enc = $matches[3];
+      }
+  }
+  return $opt_format;
+}
+
 ?>
