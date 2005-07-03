@@ -142,7 +142,8 @@ function plugin_listbox3_getStyle($s_format) {
   
   $format_enc = htmlspecialchars($s_format);
   $format_enc = preg_replace("/\%s/", '', $format_enc);
-  
+
+  $opt_format='';
   $matches=array();
   while ( preg_match('/^(?:(BG)?COLOR\(([#\w]+)\)):(.*)$/', $format_enc, $matches))
   {
