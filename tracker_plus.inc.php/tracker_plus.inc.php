@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 1.9 2005/07/12 06:48:23 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.3 2005/09/06 00:21:32 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -1245,7 +1245,7 @@ class Tracker_field_datefield extends Tracker_field
 		// デフォルト値を現在の日付にする
 		if($s_value=="NOW")
 		{
-		  $s_value = $this->get_datestr_with_format($s_format, $s_year, $s_month-1, $s_date);
+		  $s_value = $this->get_datestr_with_format($s_format, $s_year, $s_month, $s_date);
 		}
 		// Javascriptに引きわたす形式のフォーマット文字列に変更する
 		$s_format = $this->form_format($s_format);
@@ -1297,13 +1297,13 @@ EOD;
 	}
 
 	function get_datestr_with_format($format_opt,$yyyy,$mm,$dd ){
+		// 引数の月の値の範囲 month is 1 - 12
 		$strWithFormat = $format_opt;
 		$yy = $yyyy%100;
 		
-		$mm += 1; // 引数の月の値の範囲 month is 0 - 11
-		if( $yy < 10) $yy = "0" . $yy;
-		if( $mm < 10) $mm = "0" . $mm;
-		if( $dd < 10) $dd = "0" . $dd;
+		$yy = sprintf("%02d",$yy);
+		$mm = sprintf("%02d",$mm);
+		$dd = sprintf("%02d",$dd);
 		$strWithFormat = preg_replace('/YYYY/i', $yyyy, $strWithFormat);
 		$strWithFormat = preg_replace('/YY/i',   $yy,   $strWithFormat);
 		$strWithFormat = preg_replace('/MM/i',   $mm,   $strWithFormat);
