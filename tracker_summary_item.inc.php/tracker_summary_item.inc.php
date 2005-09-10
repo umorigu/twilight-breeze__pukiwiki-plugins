@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: tracker_summary_item.inc.php,v 0.5 2005/05/06 17:57:02 jjyun Exp $
+// $Id: tracker_summary_item.inc.php,v 0.6 2005/09/10 11:16:02 jjyun Exp $
 //
 // License   : GNU General Public License (GPL) 
 // 
@@ -239,13 +239,13 @@ class Tracker_summary_item_calcuation
 
 	function sum_up($list)
 	{
-		if(count($list->rows) == 0)
-		{
-			return '';
-		}
-
 		$this->sum = 0;
 		$this->count = 0;
+
+		if(count($list->rows) == 0)
+		{
+			return;
+		}
 
 		// addition the field in each rows.
 		foreach($list->rows as $key=>$row)
