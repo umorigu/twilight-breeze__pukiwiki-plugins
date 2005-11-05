@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.3 2005/09/06 00:21:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.3+a 2005/11/05 10:34:27 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -415,6 +415,15 @@ class Tracker_plus_list extends Tracker_list
 		$this->fields = plugin_tracker_plus_get_fields($page,$refer,$config);
 		
 		$pattern = join('',plugin_tracker_plus_get_source($config->page.'/page'));
+
+		// "/page"の内容が長すぎるとpreg_match()が失敗するバグ(?)があるので
+                // "//////////"までをマッチ対象とさせる
+                // ( see http://dex.qp.land.to/pukiwiki.php, Top/Memo/Wikiメモ)
+                $pattern_endpos = strpos($pattern, "//////////");
+                if($pattern_endpos > 0){
+			$pattern = substr($pattern, 0, $pattern_endpos);
+                }
+
 		// ブロックプラグインをフィールドに置換
 		// #commentなどで前後に文字列の増減があった場合に、[_block_xxx]に吸い込ませるようにする
 		$pattern = preg_replace('/^\#([^\(\s]+)(?:\((.*)\))?\s*$/m','[_block_$1]',$pattern);
