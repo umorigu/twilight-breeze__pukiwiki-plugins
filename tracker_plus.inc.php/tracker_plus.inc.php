@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.3+a 2005/11/05 10:34:27 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.4+b 2005/11/05 10:53:27 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -293,6 +293,8 @@ function plugin_tracker_plus_list_convert()
 	$limit = NULL;
 	$filter = '';
 	$cache = TRACKER_PLUS_LIST_CACHE_DEFAULT;
+
+	$number = plugin_tracker_plus_list_getNumber();
 	if (func_num_args())
 	{
 		$args = func_get_args();
@@ -314,8 +316,20 @@ function plugin_tracker_plus_list_convert()
 				list($config,$list) = array_pad(explode('/',$config,2),2,$list);
 		}
 	}
-	return plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,$limit,$filter,$cache);
+	return plugin_tracker_plus_getlist($number,$page,$refer,$config,$list,$order,$limit,$filter,$cache);
 }
+
+function plugin_tracker_plus_list_getNumber()
+{
+	global $vars;
+	static $numbers = array();
+	if( ! array_key_exists($vars['page'], $numbers) )
+	{
+		$numbers[$vars['page']] = 0;
+	}
+	return $nubmers[$vars['page']]++;
+}
+
 function plugin_tracker_plus_list_action()
 {
 	global $script,$vars,$_tracker_messages;
@@ -328,6 +342,7 @@ function plugin_tracker_plus_list_action()
 	$filter = array_key_exists('filter',$vars) ? $vars['filter'] : NULL;
 
 	$cache = isset($vars['cache']) ? $vars['cache'] : NULL;
+	$dynamicFilter = isset($vars['dynamicFilter']) ? true : false;
 
 	// this delete tracker caches. 
 	if( $cache == 'DELALL' )
@@ -342,14 +357,51 @@ function plugin_tracker_plus_list_action()
 			     );
 	}
 
+	if( $dynamicFilter && $refer != "")
+	{
+		$number = 0;
+		$pagedata = '';
+		$pagedata_old = get_source($vars['refer']);
+		foreach( $pagedata_old as $line)
+		{
+			if( ! preg_match('/^(?:\/\/| )/', $line) &&
+			    preg_match_all('/(?:#tracker_plus_list\(([^\)]*)\))/', $line, $matches, PREG_SET_ORDER))
+			{
+				$paddata = preg_split('#tracker_plus_list\([^\)]*\)/', $line);
+				$line = $paddata[0];
+				foreach($matches as $i => $match)
+				{
+					$opt = $match[1];
+					if( $vars['number'] == $number++)
+					{
+						// part of target plugin.
+						// $opt = preg_replace('/[^,]*/', $vars['value'], $opt, 1);
+						$para_array=preg_split('/,/',$opt);
+						if(count($para_array) >= 5) 
+						{
+							$para_array[4] = $vars['value'];
+							$opt = implode($para_array, ",");
+						}
+					}
+					$line .= "#tracker_plus_list($opt)" . $paddata[$i+1];
+				}
+			}
+			$pagedata .= $line;
+		}
+		page_write($vars['refer'], $pagedata);
+		return array('msg'  => '', 'body' => '' );
+		
+	}
+
+	$number = $vars['number'];
 	return array(
 		     'msg' => $_tracker_messages['msg_list'],
 		     'body'=> str_replace('$1',$s_page,$_tracker_messages['msg_back']).
-		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,NULL,$filter,$cache)
+		     plugin_tracker_plus_getlist($number,$page,$refer,$config,$list,$order,NULL,$filter,$cache)
 	);
 }
 
-function plugin_tracker_plus_getlist($page,$refer,$config_name,$list,$order='',$limit=NULL,$filter_name=NULL,$cache)
+function plugin_tracker_plus_getlist($number,$page,$refer,$config_name,$list,$order='',$limit=NULL,$filter_name=NULL,$cache)
 {
 	$config = new Config('plugin/tracker/'.$config_name);
 
@@ -365,28 +417,96 @@ function plugin_tracker_plus_getlist($page,$refer,$config_name,$list,$order='',$
 		return "<p>config file '".make_pagelink($config->page.'/'.$list)."' not found.</p>";
 	}
 
+	// $list 変数が別の意味で使いまわされているので注意!! (jjyun's comment)
+	$list = &new Tracker_plus_list($page,$refer,$config,$list,$filter_name,$cache);
+
+	$filterSelector = '';
 	if($filter_name != NULL)
 	{
-	        $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
-		if(!$filter_config->read())
+	        $filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config->config_name.'/filters');
+		if( ! $filter_config->read())
 		{
 		        // filterの設定がなされていなければ, エラーログを返す
 		        return "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>";
 		}
-	        $list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
+
+		$filterSelector = plugin_tracker_plus_getFilterSelector($filter_name, $filter_config);
+		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
+		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
 	}
 	unset($filter_config);
 
-	// $list 変数が別の意味で使いまわされているので注意!! (jjyun's comment)
-	$list = &new Tracker_plus_list($page,$refer,$config,$list,$filter_name,$cache);
-
-	if($filter_name != NULL)
-	{
-		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
-	}
 	$list->sort($order);
-	return $list->toString($limit);
+	
+	return $filterSelector . $list->toString($limit);
+}	
+
+function plugin_tracker_plus_getFilterSelector($filterName, $filterConfig)
+{
+	global $script, $vars;
+
+	if( $vars['page'] == "")
+		return "";
+
+	$optionsHTML = '';
+	$isSelect = 0;
+	$keys = $filterConfig->get_keys();
+
+	foreach( $keys as $filterOption) 
+	{
+		if( $filterOption == "" )
+			continue;
+
+		$encodedOption = htmlspecialchars($filterOption);
+		if( $filterOption == $filterName)
+		{
+			$isSelect = 1;
+			$optionsHTML .= "<option value='$encodedOption' selected='selected'>$encodedOption</option>";
+		}
+		else
+		{
+			$optionsHTML .= "<option value='$encodedOption' >$encodedOption</option>";
+		}
+	}
+	
+	$allSelected = ( $isSelect == 0) ? "selected='selected'" : "";
+	$optionsHTML = "<option value='select_all' $allSelected >SelectAll</option>"  . $optionsHTML;
+
+	$encodedScript = htmlspecialchars($script);
+ 	$encodedPage   = htmlspecialchars($vars['page']);
+
+	$body = <<< EOD
+<form action="$encodedScript" method="post" style="margin:0;">
+<a id="tracker_plus_list_no_$number">
+<div>
+Tracker_List Filter : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
+$optionsHTML
+</select>
+<input type="hidden" name="number" value="$number" />
+<input type="hidden" name="plugin" value="tracker_plus_list" />
+<input type="hidden" name="refer"  value="$encodedPage" />
+<input type="hidden" name="dynamicFilter" value="on" />
+</div>
+</a>
+</form>
+EOD;
+
+	return $body;
 }
+
+class Tracker_plus_FilterConfig extends Config
+{
+	function Tracker_plus_FilterConfig($name)
+	{
+		parent::Config($name);
+	}
+
+	function get_keys()
+	{
+		return array_keys($this->objs);
+	}
+}
+
 
 // 一覧クラス
 class Tracker_plus_list extends Tracker_list
@@ -415,15 +535,15 @@ class Tracker_plus_list extends Tracker_list
 		$this->fields = plugin_tracker_plus_get_fields($page,$refer,$config);
 		
 		$pattern = join('',plugin_tracker_plus_get_source($config->page.'/page'));
-
+		
 		// "/page"の内容が長すぎるとpreg_match()が失敗するバグ(?)があるので
-                // "//////////"までをマッチ対象とさせる
-                // ( see http://dex.qp.land.to/pukiwiki.php, Top/Memo/Wikiメモ)
-                $pattern_endpos = strpos($pattern, "//////////");
-                if($pattern_endpos > 0){
+		// "//////////"までをマッチ対象とさせる
+		// ( see http://dex.qp.land.to/pukiwiki.php, Top/Memo/Wikiメモ)
+		$pattern_endpos = strpos($pattern, "//////////");
+		if($pattern_endpos > 0){
 			$pattern = substr($pattern, 0, $pattern_endpos);
-                }
-
+		}
+		
 		// ブロックプラグインをフィールドに置換
 		// #commentなどで前後に文字列の増減があった場合に、[_block_xxx]に吸い込ませるようにする
 		$pattern = preg_replace('/^\#([^\(\s]+)(?:\((.*)\))?\s*$/m','[_block_$1]',$pattern);
