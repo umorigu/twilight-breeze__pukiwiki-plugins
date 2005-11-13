@@ -2,12 +2,12 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 1.1 2005/03/27 11:45:42 jjyun Exp $
+// $Id: datefield.inc.php,v 1.2 2005/11/14 01:29:42 jjyun Exp $
 //
 
 /* [概略の説明]
  * 日付入力補助画面付きフィールド提供プラグイン 
- *    for pukiwiki-1.4.5_1
+ *    for pukiwiki-1.4.6
  *
  * 日付入力を行わせたいテキストフィールドと、
  * 日付入力を行うためのカレンダーを表示するボタンを提供します。
@@ -50,7 +50,6 @@ function plugin_datefield_init() {
 
 function plugin_datefield_action() {
   global $script, $vars;
-  global $html_transitional;
   check_editable($vars['refer'], true, true);
 
   $number = 0;
@@ -195,10 +194,11 @@ function plugin_datefield_getDate($dateStr, $formatStr){
 // ・Javasciptを用いること、
 // ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
 function plugin_datefield_headDeclaration() {
-  global $html_transitional, $javascript;
-  
+  global $pkwk_dtd, $javascript;
+
   // XHTML 1.0 Transitional
-  $html_transitional = TRUE;
+  if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
+    $pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
 
   // <head> タグ内への <meta>宣言の追加
   $javascript = TRUE;
