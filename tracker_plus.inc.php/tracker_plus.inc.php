@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.3+c 2005/11/05 11:00:11 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.4 2005/11/13 11:42:27 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -187,6 +187,10 @@ function plugin_tracker_plus_action()
 		$real = ++$num;
 		$page = "$base/$real";
 	}
+
+	// org: QuestionBox3/211: Apply edit_auth_pages to creating page
+	edit_auth($page,true,true);
+
 	// ページデータを生成
 	$postdata = plugin_tracker_plus_get_source($source);
 
@@ -573,13 +577,17 @@ class Tracker_plus_list extends Tracker_list
 		
 		if (is_array($order) && isset($order[$sort]))
 		{
-			$index = array_flip(array_keys($order));
+			// BugTrack2/106: Only variables can be passed by reference from PHP 5.0.5
+			$order_keys = array_keys($order); // with array_shift();
+
+			$index = array_flip($order_keys);
 			$pos = 1 + $index[$sort];
-			$b_end = ($sort == array_shift(array_keys($order)));
+			$b_end = ($sort == array_shift($order_keys));
 			$b_order = ($order[$sort] == SORT_ASC);
 			$dir = ($b_end xor $b_order) ? SORT_ASC : SORT_DESC;
 			$arrow = '&br;'.($b_order ? '&uarr;' : '&darr;')."($pos)";
-			unset($order[$sort]);
+
+			unset($order[$sort], $order_keys);
 		}
 		$title = $this->fields[$field]->title;
 		$r_page = rawurlencode($this->page);
