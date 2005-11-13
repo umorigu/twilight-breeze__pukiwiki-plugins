@@ -40,12 +40,12 @@ function plugin_tracker_plus_convert()
 
 	$config_name = 'default';
 	$form = 'form';
-	$options = array();
 
 	$isDatefield = FALSE;
 
 	if (func_num_args())
 	{
+		$options = array();
 		$args = func_get_args();
 		switch (count($args))
 		{
@@ -58,6 +58,8 @@ function plugin_tracker_plus_convert()
 				$config_name = ($args[0] != '') ? $args[0] : $config_name;
 				list($config_name,$form) = array_pad(explode('/',$config_name,2),2,$form);
 		}
+
+		unset($options, $args);
 	}
 
 	$config = new Config('plugin/tracker/'.$config_name);
@@ -67,12 +69,15 @@ function plugin_tracker_plus_convert()
 		return "<p>config file '".htmlspecialchars($config_name)."' not found.</p>";
 	}
 
-	// Configクラスには、config_name は定義されていない。(jjyun's comment)
+	// (Attension) Config Class don't have config_name member. This make extra definision. (jjyun)
 	$config->config_name = $config_name;
 
 	$fields = plugin_tracker_plus_get_fields($base,$refer,$config);
 
 	$form = $config->page.'/'.$form;
+	
+	unset($base, $refer, $config, $config_name);
+
 	if (!is_page($form))
 	{
 		return "<p>config file '".make_pagelink($form)."' not found.</p>";
@@ -133,7 +138,7 @@ function plugin_tracker_plus_getNumber() {
 
 function plugin_tracker_plus_action()
 {
-	global $post, $vars, $now;
+	global $post, $now;
 
 	if ( defined('PKWK_READONLY') && PKWK_READONLY) die_message('PKWK_READONLY prohibits editing');
 
@@ -145,6 +150,8 @@ function plugin_tracker_plus_action()
 		return "<p>config file '".htmlspecialchars($config_name)."' not found.</p>";
 	}
 	$config->config_name = $config_name;
+	unset($config_name);
+
 	$source = $config->page.'/page';
 
 	$refer = array_key_exists('_refer',$post) ? $post['_refer'] : $post['_base'];
@@ -203,6 +210,8 @@ function plugin_tracker_plus_action()
 
 	$fields = plugin_tracker_plus_get_fields($page,$refer,$config);
 
+	unset($config,$refer,$source,$base,$num,$name,$real);
+
 	// Creating an empty page, before attaching files
        	touch(get_filename($page));
 
@@ -212,10 +221,11 @@ function plugin_tracker_plus_action()
 		// $value = array_key_exists($key,$_post) ?
 		// 	$fields[$key]->format_value($_post[$key]) : '';
 	        $value = '';
-		if( array_key_exists($key,$_post) ){
-		  $value = is_a($fields[$key],"Tracker_field_hidden2") ?
-		    $fields[$key]->format_value($_post[$key],$_post) :
-		    $fields[$key]->format_value($_post[$key]);
+		if( array_key_exists($key,$_post) )
+		{
+			$value = is_a($fields[$key],"Tracker_field_hidden2") ?
+				$fields[$key]->format_value($_post[$key],$_post) :
+				$fields[$key]->format_value($_post[$key]);
 		}
 
 		foreach (array_keys($postdata) as $num)
@@ -379,6 +389,8 @@ function plugin_tracker_plus_getlist($page,$refer,$config_name,$list_name,$order
 	// Attension: Original code use $list as another use in this. (before this, $list contains list_name). by jjyun.
 	$list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache);
 
+	unset($config);
+
 	$filterSelector = '';
 	if($filter_name != NULL)
 	{
@@ -420,8 +432,9 @@ EOD;
 
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
 		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+
+		unset($filter_config);
 	}
-	unset($filter_config);
 
 	$list->sort($order);
 	
@@ -430,8 +443,6 @@ EOD;
 
 function plugin_tracker_plus_getFilterSelector($filterName, $filterConfig)
 {
-	global $script, $vars;
-
 	$optionsHTML = '';
 	$isSelect = 0;
 	$keys = $filterConfig->get_keys();
@@ -719,8 +730,6 @@ EOF;
 
 	function get_sort_type($arr)
 	{
-		global $script;
-
 		$field = $arr[1];
 		if (!array_key_exists($field,$this->fields))
 		{
@@ -875,7 +884,7 @@ EOF;
 
 		// This delete cachefiles related this Lv1.cache.
 		if(! $this->delete_caches($cachefiles_pattern) )
-		  die_message( CACHE_DIR . ' is not found or not readable.');
+			die_message( CACHE_DIR . ' is not found or not readable.');
 
 		ksort($this->rows);
 		$filename = $this->get_listcache_filename();
@@ -1411,8 +1420,8 @@ EOD;
 	}
 
 	function set_head_declaration() {
-		global $pkwk_dtd, $javascript;
-
+		global $pkwk_dtd, $javascript;  
+		
 		// XHTML 1.0 Transitional
 		if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
 			$pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
