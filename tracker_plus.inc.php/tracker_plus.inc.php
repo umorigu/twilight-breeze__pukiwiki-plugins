@@ -42,7 +42,6 @@ function plugin_tracker_plus_convert()
 	$form = 'form';
 	$options = array();
 
-	global $html_transitional;
 	$isDatefield = FALSE;
 
 	if (func_num_args())
@@ -1412,10 +1411,11 @@ EOD;
 	}
 
 	function set_head_declaration() {
-		global $html_transitional, $javascript;
+		global $pkwk_dtd, $javascript;
 
 		// XHTML 1.0 Transitional
-		$html_transitional = TRUE;
+		if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
+			$pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
 		
 		// <head> タグ内への <meta>宣言の追加
 		$javascript = TRUE;
