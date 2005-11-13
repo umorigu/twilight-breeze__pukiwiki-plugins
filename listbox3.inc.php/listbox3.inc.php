@@ -83,16 +83,16 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname) {
   $options_html = plugin_listbox3_getOptions($value, $template, $fieldname);
   $body = <<<EOD
     <form action="$script_enc" method="post" style="margin:0;"> 
-    <a id="listbox3_no_$number">
     <div>
+    <a id="listbox3_no_$number">
     <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
     $options_html
     </select>
     <input type="hidden" name="number" value="$number" />
     <input type="hidden" name="plugin" value="listbox3" />
     <input type="hidden" name="refer" value="$page_enc" />
-    </div>
     </a>
+    </div>
     </form>
 EOD;
   //$body = preg_replace("/\s+</", '<', $body);
