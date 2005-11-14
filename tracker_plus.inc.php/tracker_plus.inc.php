@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.4 2005/11/13 11:42:27 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.4 2005/11/15 07:08:11 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -76,8 +76,6 @@ function plugin_tracker_plus_convert()
 
 	$form = $config->page.'/'.$form;
 	
-	unset($base, $refer, $config, $config_name);
-
 	if (!is_page($form))
 	{
 		return "<p>config file '".make_pagelink($form)."' not found.</p>";
@@ -150,7 +148,6 @@ function plugin_tracker_plus_action()
 		return "<p>config file '".htmlspecialchars($config_name)."' not found.</p>";
 	}
 	$config->config_name = $config_name;
-	unset($config_name);
 
 	$source = $config->page.'/page';
 
@@ -209,8 +206,6 @@ function plugin_tracker_plus_action()
 	// $_post['_refer'] = $_post['refer'];
 
 	$fields = plugin_tracker_plus_get_fields($page,$refer,$config);
-
-	unset($config,$refer,$source,$base,$num,$name,$real);
 
 	// Creating an empty page, before attaching files
        	touch(get_filename($page));
@@ -388,8 +383,6 @@ function plugin_tracker_plus_getlist($page,$refer,$config_name,$list_name,$order
 
 	// Attension: Original code use $list as another use in this. (before this, $list contains list_name). by jjyun.
 	$list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache);
-
-	unset($config);
 
 	$filterSelector = '';
 	if($filter_name != NULL)
