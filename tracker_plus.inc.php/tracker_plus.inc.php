@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.4 2005/11/15 07:08:11 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.5 2005/11/15 07:08:11 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
