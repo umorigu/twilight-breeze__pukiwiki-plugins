@@ -62,6 +62,7 @@ td.datefield-diffmonth
 td.datefield-footer
 {
    font-size:13px;
+   white-space:nowrap;
 }
 
 /* *** */ 
