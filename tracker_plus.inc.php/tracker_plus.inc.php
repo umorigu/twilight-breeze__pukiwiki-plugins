@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.5 2005/11/15 07:08:11 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.6 2005/11/19 01:30:24 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -29,6 +29,43 @@ define('TRACKER_PLUS_LIST_SHOW_ERROR_PAGE',TRUE);
 define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 0); 
 // define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 1); 
 // define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 2); 
+
+/////////////////////////////////////////////////////////////////////////////
+// フィルタを指定時における、動的フィルタ選択のデフォルト設定
+//  ** 設定値の説明 ** filter名の頭に + or - を付けるとリスト表示の制御は可能ですが...
+//   TRUE : filter名の先頭に + を指定しなくてもフィルタ選択用のリストを表示します
+//  FALSE : filter名の先頭に + を指定しないと、フィルタ選択用のリストは表示しません
+define('TRACKER_PLUS_LIST_DYNAMIC_FILTER_DEFAULT', TRUE);
+
+function plugin_tracker_plus_init()
+{
+	switch (LANG) {
+	case 'ja' :
+		$msg = plugin_tracker_plus_init_ja();
+		break;
+	default:
+		$msg = plugin_tracker_plus_init_en();
+	}
+	set_plugin_messages($msg);
+}
+
+function plugin_tracker_plus_init_ja()
+{
+	$msg = array(
+		'_msg_tracker_plus_list_filter_label' => "絞り込み条件一覧",
+		'_msg_tracker_plus_list_nodata' => "一覧に表示する項目はありません.",
+	);
+	return $msg;
+}
+
+function plugin_tracker_plus_init_en()
+{
+	$msg = array(
+		'_msg_tracker_plus_list_filter_label' => "Tracker_List FilterList",
+		'_msg_tracker_plus_list_nodata' => "There is no item displayed in List.",
+	);
+	return $msg;
+}
 
 function plugin_tracker_plus_convert()
 {
@@ -262,7 +299,7 @@ function plugin_tracker_plus_get_fields($base,$refer,&$config)
                  '_page'=>'page',    // ページ名
                  '_name'=>'text',    // 指定されたページ名
                  '_real'=>'real',    // 実際のページ名
-                 '_refer'=>'page',   // 参照元(フォームのあるページ)
+		 '_refer'=>'page',   // 参照元(フォームのあるページ)
                  '_base'=>'page',    // 基準ページ
                  '_submit'=>'submit_plus', // 追加ボタン
                  ) as $field=>$class)
@@ -299,7 +336,7 @@ function plugin_tracker_plus_list_convert()
 	$order = '_real:SORT_DESC';
 	$list = 'list';
 	$limit = NULL;
-	$filter = '';
+	$filter_name = '';
 	$cache = TRACKER_PLUS_LIST_CACHE_DEFAULT;
 
 	if (func_num_args())
@@ -310,7 +347,7 @@ function plugin_tracker_plus_list_convert()
 		        case 6:
 			        $cache = is_numeric($args[5]) ? $args[5] : $cache;
 		        case 5:
-			        $filter = $args[4];
+			        $filter_name = $args[4];
 			case 4:
 				$limit = is_numeric($args[3]) ? $args[3] : $limit;
 			case 3:
@@ -323,19 +360,23 @@ function plugin_tracker_plus_list_convert()
 				list($config,$list) = array_pad(explode('/',$config,2),2,$list);
 		}
 	}
-	return plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,$limit,$filter,$cache);
+
+	return plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,$limit,$filter_name,$cache);
 }
 
 function plugin_tracker_plus_list_action()
 {
 	global $script,$vars,$_tracker_messages;
 
-	$page = $refer = $vars['refer'];
+	$page = $refer = $vars['page'];
+	$orefer = $vars['orefer'];
+	if( $orefer == NULL) $orefer = $refer;
 	$s_page = make_pagelink($page);
+	$s_orefer = make_pagelink($orefer);
 	$config = $vars['config'];
 	$list = array_key_exists('list',$vars) ? $vars['list'] : 'list';
 	$order = array_key_exists('order',$vars) ? $vars['order'] : '_real:SORT_DESC';
-	$filter = array_key_exists('filter',$vars) ? $vars['filter'] : NULL;
+	$filter_name = array_key_exists('filter',$vars) ? $vars['filter'] : NULL;
 
 	$cache = isset($vars['cache']) ? $vars['cache'] : NULL;
 	$dynamicFilter = isset($vars['dynamicFilter']) ? true : false;
@@ -355,17 +396,18 @@ function plugin_tracker_plus_list_action()
 
 	if( $dynamicFilter )
 	{
-		$filter = $vars['value'];
+		$filter_name = $vars['value'];
  	}
-
+	
 	return array(
-		     'msg' => $_tracker_messages['msg_list'],
-		     'body'=> str_replace('$1',$s_page,$_tracker_messages['msg_back']).
-		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,NULL,$filter,$cache)
+		     'msg' => str_replace('$1',$s_page,$_tracker_messages['msg_list']),
+		     'body'=> str_replace('$1',$s_orefer,$_tracker_messages['msg_back']).
+		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,NULL,$filter_name,$cache, $orefer)
 	);
 }
 
-function plugin_tracker_plus_getlist($page,$refer,$config_name,$list_name,$order='',$limit=NULL,$filter_name=NULL,$cache)
+function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $order = '', $limit = NULL,
+				     $filter_name = NULL, $cache, $orefer = NULL)
 {
 	$config = new Config('plugin/tracker/'.$config_name);
 
@@ -382,86 +424,29 @@ function plugin_tracker_plus_getlist($page,$refer,$config_name,$list_name,$order
 	}
 
 	// Attension: Original code use $list as another use in this. (before this, $list contains list_name). by jjyun.
-	$list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache);
+	$list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache,$orefer);
 
 	$filterSelector = '';
-	if($filter_name != NULL)
+	if($list->filter_name != NULL || $list->dynamic_filter == TRUE )
 	{
-	        $filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config->config_name.'/filters');
-		if( ! $filter_config->read())
+	        $filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config_name.'/filters');
+		if( ! $filter_config->read() && $list->filter_name != NULL)
 		{
 		        // filterの設定がなされていなければ, エラーログを返す
 		        return "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>";
 		}
 
-		$optionsHTML = plugin_tracker_plus_getFilterSelector($filter_name, $filter_config);
-
-		$s_page = htmlspecialchars($page);
-		$s_config = htmlspecialchars($config_name);
-		$s_list = htmlspecialchars($list_name);
-		$s_order = htmlspecialchars($order);
-		$s_filter = htmlspecialchars($filter_name);
-		$s_cache = htmlspecialchars($cache);
-
-
-		$filterSelector = <<< EOD
-<form action="$s_script" method="post" style="margin:0;">
-<div>
-Tracker_List Filter : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
-$optionsHTML
-</select>
-<input type="hidden" name="plugin" value="tracker_plus_list" />
-<input type="hidden" name="refer"  value="$s_page" />
-<input type="hidden" name="config" value="$s_config" />
-<input type="hidden" name="list"   value="$s_list" />
-<input type="hidden" name="order"  value="$s_order" />
-<input type="hidden" name="filter" value="$s_filter" />
-<input type="hidden" name="cache"  value="$s_cache" />
-<input type="hidden" name="dynamicFilter" value="on" />
-</div>
-</a>
-</form>
-EOD;
-
-		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
-		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
-
-		unset($filter_config);
+		$list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
+		
+		$filterSelector = $list->getSelector($list_filter);
+		$list_filter->filter($list);
+		unset($list_filter);
 	}
 
 	$list->sort($order);
 	
 	return $filterSelector . $list->toString($limit);
 }	
-
-function plugin_tracker_plus_getFilterSelector($filterName, $filterConfig)
-{
-	$optionsHTML = '';
-	$isSelect = 0;
-	$keys = $filterConfig->get_keys();
-
-	foreach( $keys as $filterOption) 
-	{
-		if( $filterOption == "" )
-			continue;
-
-		$encodedOption = htmlspecialchars($filterOption);
-		if( $filterOption == $filterName)
-		{
-			$isSelect = 1;
-			$optionsHTML .= "<option value='$encodedOption' selected='selected'>$encodedOption</option>";
-		}
-		else
-		{
-			$optionsHTML .= "<option value='$encodedOption' >$encodedOption</option>";
-		}
-	}
-	
-	$allSelected = ( $isSelect == 0) ? "selected='selected'" : "";
-	$optionsHTML = "<option value='select_all' $allSelected >SelectAll</option>"  . $optionsHTML;
-	
-	return $optionsHTML;
-}
 
 class Tracker_plus_FilterConfig extends Config
 {
@@ -481,6 +466,8 @@ class Tracker_plus_FilterConfig extends Config
 class Tracker_plus_list extends Tracker_list
 {
 	var $filter_name;
+	var $dynamic_filter = TRACKER_PLUS_LIST_DYNAMIC_FILTER_DEFAULT;
+	var $orefer;
 	var $cache_level = array(
 			   'NO'  => 0, // キャッシュロジックを利用しない
 			   'LV1' => 1, // ページの読み込み処理に対するキャッシュを有効にする
@@ -495,12 +482,28 @@ class Tracker_plus_list extends Tracker_list
 			   'verbs' => FALSE,
 			   );
 
-	function Tracker_plus_list($page,$refer,&$config,$list,$filter_name,$cache)
+	function Tracker_plus_list($page,$refer,&$config,$list,$filter_name,$cache,$orefer)
 	{
 		$this->page = $page;
 		$this->config = &$config;
 		$this->list = $list;
-		$this->filter_name = $filter_name;
+		$this->refer = $refer;
+		$this->orefer = ($orefer != NULL) ? $orefer : $refer;
+
+		if( preg_match("/^[+|-](.*)/", $filter_name, $matches) )
+		{
+			$this->filter_name = $matches[1];
+			$this->dynamic_filter = ( ord($filter_name) == ord("+") ) ? true : false;
+		}
+		else
+		{
+			$this->filter_name = $filter_name;
+			if ( strlen($this->filter_name) == 0 )
+			{
+				$this->dynamic_filter = false;
+			}
+		}
+
 		$this->fields = plugin_tracker_plus_get_fields($page,$refer,$config);
 		
 		$pattern = join('',plugin_tracker_plus_get_source($config->page.'/page'));
@@ -532,6 +535,7 @@ class Tracker_plus_list extends Tracker_list
 			}
 		}
 
+		$this->cache['value'] = $cache;
 		$this->cache['verbs'] = ($cache < 0) ? TRUE : FALSE;
 		$this->cache['level'] = (abs($cache) <= $this->cache_level['LV2']) ? abs($cache) : $this->cache_level['NO']; 
 
@@ -593,7 +597,9 @@ class Tracker_plus_list extends Tracker_list
 			unset($order[$sort], $order_keys);
 		}
 		$title = $this->fields[$field]->title;
+
 		$r_page = rawurlencode($this->page);
+		$r_orefer = rawurlencode($this->orefer);
 		$r_config = rawurlencode($this->config->config_name);
 		$r_list = rawurlencode($this->list);
 		$_order = array("$sort:$dir");
@@ -601,15 +607,60 @@ class Tracker_plus_list extends Tracker_list
 			foreach ($order as $key=>$value)
 				$_order[] = "$key:$value";
 		$r_order = rawurlencode(join(';',$_order));
-		$r_filter = rawurlencode($this->filter_name);
+
+		// attension : if you modified this, you should also see $this->getSelector()
+		$_filter = ($this->dynamic_filter) ? "+". $this->filter_name : $this->filter_name; 
+		$r_filter = rawurlencode($_filter);
+		$r_cache = rawurlencode($this->cache['value']);
 		
-		return "[[$title$arrow>$script?plugin=tracker_plus_list&refer=$r_page&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter]]";
+		return "[[$title$arrow>$script?plugin=tracker_plus_list&page=$r_page&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
+	}
+
+	function getSelector($filter)
+	{
+		global $_msg_tracker_plus_list_filter_label;
+
+		if( ! $filter->filter_select ) return "";
+		if( $orefer == NULL) $orefer = $refer;
+
+		$optionsHTML = $filter->getFilterOptionsHTML();
+
+		$s_page = htmlspecialchars($this->page);
+		$s_refer = htmlspecialchars($this->refer);
+		$s_orefer = htmlspecialchars($this->orefer);
+		$s_config = htmlspecialchars($this->config->config_name);
+		$s_list = htmlspecialchars($this->list);
+		$s_order = htmlspecialchars($this->$order);
+		$s_filter = htmlspecialchars($filter->name);
+		$s_cache = htmlspecialchars($this->cache['value']);
+
+		$selector_html = <<< EOD
+<form action="$s_script" method="post" style="margin:0;">
+<div>
+$_msg_tracker_plus_list_filter_label : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
+$optionsHTML
+</select>
+<input type="hidden" name="plugin" value="tracker_plus_list" />
+<input type="hidden" name="page"   value="$s_page" />
+<input type="hidden" name="refer"  value="$s_refer" />
+<input type="hidden" name="orefer" value="$s_orefer" />
+<input type="hidden" name="config" value="$s_config" />
+<input type="hidden" name="list"   value="$s_list" />
+<input type="hidden" name="order"  value="$s_order" />
+<input type="hidden" name="filter" value="$s_filter" />
+<input type="hidden" name="cache"  value="$s_cache" />
+<input type="hidden" name="dynamicFilter" value="on" />
+</div>
+</form>
+EOD;
+		return $selector_html;
 	}
 
 	// over-wride function.
 	function toString($limit=NULL)
 	{
 		global $_tracker_messages;
+		global $_msg_tracker_plus_list_nodata;
 
 		$source = '';
 		$sort_types = '';
@@ -626,7 +677,7 @@ class Tracker_plus_list extends Tracker_list
 		}
 		if (count($this->rows) == 0)
 		{
-			return '';
+			return $_msg_tracker_plus_list_nodata;
 		}
 
 		$htmls = $this->get_cache_cnvrt();
@@ -757,10 +808,12 @@ EOF;
                 $r_list   = encode($this->list);
 		return "$r_page-$r_config-$r_list";
 	}		
+
 	function get_listcache_filename()
 	{
 		return CACHE_DIR . $this->get_cache_filename().".1.tracker";
 	}		
+
 	function get_cnvtcache_filename()
 	{
                 $r_filter   = encode($this->filter_name);
@@ -793,6 +846,7 @@ EOF;
 		$status .= '</div>';
 		return $status;
 	}
+
 	function get_cache_rows()
 	{
 		$this->rows = array();
@@ -926,6 +980,7 @@ EOF;
 		flock($fp, LOCK_UN);
 		fclose($fp);
 	}
+
 	function get_cache_cnvrt()
 	{
 		$cachefile = $this->get_cnvtcache_filename(); 
@@ -982,6 +1037,7 @@ EOF;
 
 		return $htmls;
 	}
+
 	function put_cache_cnvrt($htmls)
 	{
 		if( $this->cache['level'] != $this->cache_level['LV2'] )
@@ -1020,6 +1076,7 @@ EOF;
 		closedir($dp);
 		return TRUE;
 	}
+
 }
 
 function plugin_tracker_plus_get_source($page)
@@ -1031,36 +1088,80 @@ function plugin_tracker_plus_get_source($page)
 // inner class of Tracker_list. But inner class is supported by PHP5, not PHP4.(jjyun)
 class Tracker_plus_list_filter
 {
-	var $filter_name;
-	var $filter_conditions = array();
+	var $name;
+	var $filter_select;
+	var $conditions = array();
+	var $config;
   
-	function Tracker_plus_list_filter($filter_config, $filter_name)
+	function Tracker_plus_list_filter($filter_config, $name = NULL, $filter_select = FALSE)
 	{
-		$this->filter_name = $filter_name;
-		foreach( $filter_config->get($filter_name) as $filter )
+		$this->config = $filter_config;  
+		$this->name = $name;
+		$this->filter_select = $filter_select;
+		foreach( $filter_config->get($name) as $filter )
 		{
-			array_push( $this->filter_conditions,
-				    new Tracker_plus_list_filterCondition($filter, $filter_name) );
+			array_push( $this->conditions,
+				    new Tracker_plus_list_filterCondition($filter, $name) );
 		}
 	}
 
-	function filters($var)
+	function filter(& $list)
+	{
+		if( $this->name != NULL)
+		{
+			$list->rows = array_filter($list->rows, array($this, "judge" ));
+		}
+	}
+
+	function judge($var)
 	{
 		$counter = 0;  
 		$condition_flag = true;
-		foreach($this->filter_conditions as $filter)
+		foreach($this->conditions as $condition)
 		{
-			if($filter->is_cnctlogic_AND or $counter == 0)
+			if($condition->is_cnctlogic_AND or $counter == 0)
 			{
-				$condition_flag = ($filter->filter($var) and $condition_flag );
+				$condition_flag = ($condition->filter($var) and $condition_flag );
 			}
 			else
 			{  
-				$condition_flag = ($filter->filter($var)  or $condition_flag );
+				$condition_flag = ($condition->filter($var)  or $condition_flag );
 			}
 			$counter++ ;
 		}
 		return $condition_flag;
+	}
+
+	function getFilterOptionsHTML()
+	{
+		$optionsHTML = '';
+		$isSelect = false;
+		$keys = $this->config->get_keys();
+
+		// attension : if you modified this, you should see Tracker_plus_list::replace_title()
+		$d_select = ($this->filter_select) ? "+" : "";
+
+		foreach( $keys as $option) 
+		{
+			if( $option == "" )
+				continue;
+
+			$encodedOption = htmlspecialchars($option);
+			if( $option == $this->name)
+			{
+				$isSelect = true;
+				$optionsHTML .= "<option value='$d_select$encodedOption' selected='selected'>$encodedOption</option>";
+			}
+			else
+			{
+				$optionsHTML .= "<option value='$d_select$encodedOption' >$encodedOption</option>";
+			}
+		}
+	
+		$allSelected = ( $isSelect ) ? "" : "selected='selected'" ;
+		$optionsHTML = "<option value='SelectAll' $allSelected >SelectAll</option>"  . $optionsHTML;
+		
+		return $optionsHTML;
 	}
 }
 class Tracker_plus_list_filterCondition
