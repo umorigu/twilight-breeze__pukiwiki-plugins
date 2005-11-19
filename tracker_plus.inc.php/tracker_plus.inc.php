@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.6 2005/11/19 01:30:24 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.6 2005/11/19 11:10:09 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -535,7 +535,6 @@ class Tracker_plus_list extends Tracker_list
 			}
 		}
 
-		$this->cache['value'] = $cache;
 		$this->cache['verbs'] = ($cache < 0) ? TRUE : FALSE;
 		$this->cache['level'] = (abs($cache) <= $this->cache_level['LV2']) ? abs($cache) : $this->cache_level['NO']; 
 
@@ -611,7 +610,10 @@ class Tracker_plus_list extends Tracker_list
 		// attension : if you modified this, you should also see $this->getSelector()
 		$_filter = ($this->dynamic_filter) ? "+". $this->filter_name : $this->filter_name; 
 		$r_filter = rawurlencode($_filter);
-		$r_cache = rawurlencode($this->cache['value']);
+
+		$_cache = ( $this->cache['level'] == $this->cache_level['LV2'] ) ? $this->cache_level['LV1'] : $this->cache['level'];
+		if( $this->cache['verbs'] ) $_cache = -1 * $_cache;
+		$r_cache = rawurlencode($_cache);
 		
 		return "[[$title$arrow>$script?plugin=tracker_plus_list&page=$r_page&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
 	}
@@ -632,7 +634,10 @@ class Tracker_plus_list extends Tracker_list
 		$s_list = htmlspecialchars($this->list);
 		$s_order = htmlspecialchars($this->$order);
 		$s_filter = htmlspecialchars($filter->name);
-		$s_cache = htmlspecialchars($this->cache['value']);
+
+		$_cache = ( $this->cache['level'] == $this->cache_level['LV2'] ) ? $this->cache_level['LV1'] : $this->cache['level'];
+		if( $this->cache['verbs'] ) $_cache = -1 * $_cache;
+		$s_cache = htmlspecialchars($_cache);
 
 		$selector_html = <<< EOD
 <form action="$s_script" method="post" style="margin:0;">
