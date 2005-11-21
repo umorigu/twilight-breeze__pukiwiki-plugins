@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.6 2005/11/19 11:10:09 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.6 2005/11/22 00:20:24 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -20,6 +20,7 @@ define('TRACKER_PLUS_LIST_EXCLUDE_PATTERN','#^SubMenu$|/#');
 // 項目の取り出しに失敗したページを一覧に表示する
 define('TRACKER_PLUS_LIST_SHOW_ERROR_PAGE',TRUE);
 
+
 /////////////////////////////////////////////////////////////////////////////
 // CacheLevelのデフォルトの設定
 // ** 設定値の説明 ** 負の値は冗長モードを表します
@@ -36,6 +37,19 @@ define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 0);
 //   TRUE : filter名の先頭に + を指定しなくてもフィルタ選択用のリストを表示します
 //  FALSE : filter名の先頭に + を指定しないと、フィルタ選択用のリストは表示しません
 define('TRACKER_PLUS_LIST_DYNAMIC_FILTER_DEFAULT', TRUE);
+
+/////////////////////////////////////////////////////////////////////////////
+// 動的フィルタのリストラベルの拡張設定
+define('TRACKER_PLUS_LIST_APPLY_LISTFORMAT',TRUE);
+
+//////////////////////////////////////////////////////////////////////////////
+// ** TRACKER_PLUS FILTER CONSTANT DEFINISION ** 
+// If you want to keep compatible to before 2.5, 
+//   you should define below values "かつ" and "除外" respectively.
+define('TRACKER_PLUS_FILTER_AND_CONDITION', "かつ" );      // "かつ" or "AND"
+define('TRACKER_PLUS_FILTER_EXCLUDE_CONDITION', "除外");   // "除外" or "EXCLUDE" 
+//////////////////////////////////////////////////////////////////////////////
+define('TRACKER_PLUS_FILTER_EXTENDED_SETTING_TITLE', "拡張見出し"); // "見出し設定" or "EXTENTED_TITLE" 
 
 function plugin_tracker_plus_init()
 {
@@ -371,7 +385,6 @@ function plugin_tracker_plus_list_action()
 	$page = $refer = $vars['page'];
 	$orefer = $vars['orefer'];
 	if( $orefer == NULL) $orefer = $refer;
-	$s_page = make_pagelink($page);
 	$s_orefer = make_pagelink($orefer);
 	$config = $vars['config'];
 	$list = array_key_exists('list',$vars) ? $vars['list'] : 'list';
@@ -400,7 +413,7 @@ function plugin_tracker_plus_list_action()
  	}
 	
 	return array(
-		     'msg' => str_replace('$1',$s_page,$_tracker_messages['msg_list']),
+		     'msg' => str_replace('$1',$page,$_tracker_messages['msg_list']),
 		     'body'=> str_replace('$1',$s_orefer,$_tracker_messages['msg_back']).
 		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,NULL,$filter_name,$cache, $orefer)
 	);
@@ -426,10 +439,11 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 	// Attension: Original code use $list as another use in this. (before this, $list contains list_name). by jjyun.
 	$list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache,$orefer);
 
-	$filterSelector = '';
+	$filter_selector = '';
 	if($list->filter_name != NULL || $list->dynamic_filter == TRUE )
 	{
 	        $filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config_name.'/filters');
+
 		if( ! $filter_config->read() && $list->filter_name != NULL)
 		{
 		        // filterの設定がなされていなければ, エラーログを返す
@@ -438,18 +452,19 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
 		
-		$filterSelector = $list->getSelector($list_filter);
+		$filter_selector = $list->get_selector($list_filter);
 		$list_filter->filter($list);
 		unset($list_filter);
 	}
 
 	$list->sort($order);
 	
-	return $filterSelector . $list->toString($limit);
+	return $filter_selector . $list->toString($limit);
 }	
 
 class Tracker_plus_FilterConfig extends Config
 {
+
 	function Tracker_plus_FilterConfig($name)
 	{
 		parent::Config($name);
@@ -458,6 +473,29 @@ class Tracker_plus_FilterConfig extends Config
 	function get_keys()
 	{
 		return array_keys($this->objs);
+	}
+
+	function after_read($title)
+	{
+		$after_obj = NULL;
+		$obj = & $this->get_object($title);
+
+		foreach( $obj->after as $after_line )
+		{
+			if( $after_line == '') continue;
+
+    			if ($after_line{0} == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
+			{
+				// Table row
+				if (! is_a($after_obj, 'ConfigTable_Sequential') )
+					$after_obj = & new ConfigTable_Sequential('', $after_obj);
+				// Trim() each table cell
+				$after_obj->add_value(array_map('trim', explode('|', $matches[1])));
+			}
+
+		}
+
+		return $after_obj->values;
 	}
 }
 
@@ -607,7 +645,7 @@ class Tracker_plus_list extends Tracker_list
 				$_order[] = "$key:$value";
 		$r_order = rawurlencode(join(';',$_order));
 
-		// attension : if you modified this, you should also see $this->getSelector()
+		// attension : if you modified this, you should also see $this->get_selector()
 		$_filter = ($this->dynamic_filter) ? "+". $this->filter_name : $this->filter_name; 
 		$r_filter = rawurlencode($_filter);
 
@@ -618,14 +656,14 @@ class Tracker_plus_list extends Tracker_list
 		return "[[$title$arrow>$script?plugin=tracker_plus_list&page=$r_page&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
 	}
 
-	function getSelector($filter)
+	function get_selector($filter)
 	{
 		global $_msg_tracker_plus_list_filter_label;
 
 		if( ! $filter->filter_select ) return "";
 		if( $orefer == NULL) $orefer = $refer;
 
-		$optionsHTML = $filter->getFilterOptionsHTML();
+		$optionsHTML = $filter->get_options_html();
 
 		$s_page = htmlspecialchars($this->page);
 		$s_refer = htmlspecialchars($this->refer);
@@ -1137,7 +1175,7 @@ class Tracker_plus_list_filter
 		return $condition_flag;
 	}
 
-	function getFilterOptionsHTML()
+	function get_options_html()
 	{
 		$optionsHTML = '';
 		$isSelect = false;
@@ -1152,14 +1190,17 @@ class Tracker_plus_list_filter
 				continue;
 
 			$encodedOption = htmlspecialchars($option);
+			list($label, $style) = ( TRACKER_PLUS_LIST_APPLY_LISTFORMAT ) ? 
+							$this->get_option_style($option) : array($encodeOption ,"");
+			
 			if( $option == $this->name)
 			{
 				$isSelect = true;
-				$optionsHTML .= "<option value='$d_select$encodedOption' selected='selected'>$encodedOption</option>";
+				$optionsHTML .= "<option value='$d_select$encodedOption' $style selected='selected'>$label</option>";
 			}
 			else
 			{
-				$optionsHTML .= "<option value='$d_select$encodedOption' >$encodedOption</option>";
+				$optionsHTML .= "<option value='$d_select$encodedOption' $style>$label</option>";
 			}
 		}
 	
@@ -1168,6 +1209,41 @@ class Tracker_plus_list_filter
 		
 		return $optionsHTML;
 	}
+
+	function get_option_style($filter_name)
+	{
+		$s_label = $filter_name;
+		$s_format = "";
+
+		foreach( $this->config->after_read($filter_name) as $options)
+		{
+			if($options[0] != TRACKER_PLUS_FILTER_EXTENDED_SETTING_TITLE ) continue;
+
+			$s_label=$options[1];
+			$s_format=$options[2];
+
+			if( $s_format == '' ) break;
+
+			$format_enc = htmlspecialchars($s_format);
+			$format_enc = preg_replace("/\%s/", '', $format_enc);
+
+			$opt_format='';
+			$matches=array();
+			while ( preg_match('/^(?:(BG)?COLOR\(([#\w]+)\)):(.*)$/', $format_enc, $matches))
+			{
+				if ($matches[0])
+				{
+					$style_name = $matches[1] ? 'background-color' : 'color';
+					$opt_format .= $style_name . ':' . htmlspecialchars($matches[2]) . ';';
+					$format_enc = $matches[3];
+				}
+			}
+			$s_format = 'style='.$opt_format;
+		}
+
+		return array($s_label, $s_format);
+	}
+
 }
 class Tracker_plus_list_filterCondition
 {
@@ -1180,12 +1256,11 @@ class Tracker_plus_list_filterCondition
 	function Tracker_plus_list_filterCondition($field,$name)
 	{
 		$this->name = $name;
-		$this->is_cnctlogic_AND = ($field[0] == "かつ") ? true : false ;
+		$this->is_cnctlogic_AND = ($field[0] == TRACKER_PLUS_FILTER_AND_CONDITION ) ? true : false ;
 		$this->target = $field[1];
 		$this->matches = preg_quote($field[2],'/');
 		$this->matches = implode(explode(',',$this->matches) ,'|');
-		$this->is_exclued = ($field[3] == "除外") ? true : false ;
-		
+		$this->is_exclued = ($field[3] == TRACKER_PLUS_FILTER_EXCLUDE_CONDITION ) ? true : false ;
 	}
   
 	function filter($var)
@@ -1210,7 +1285,6 @@ class Tracker_field_select2 extends Tracker_field_select
 {
 	var $sort_type = SORT_NUMERIC;
   
-
 	//Tracker_field_select にあるmultiple 指定ができないようにする。
 	function get_tag($empty=FALSE)
 	{
@@ -1243,7 +1317,8 @@ class Tracker_field_select2 extends Tracker_field_select
 		static $options = array();
 		if (!array_key_exists($this->name,$options))
 		{ 
-			$options[$this->name] = array_flip(array_map(create_function('$arr','return $arr[0];'), $this->config->get($this->name)));
+			$options[$this->name] = array_flip( array_map(create_function('$arr','return $arr[0];'),
+								      $this->config->get($this->name) ) );
 		}
 
 		$regmatch_value=$this->get_key($value);
@@ -1565,7 +1640,7 @@ class Tracker_plus_field_string_utility {
 				}
 				else
 				{
-		  			$extract_arg = $str_plugin . $str_arg;
+					$extract_arg = $str_plugin . $str_arg;
 				}
 			}
 			// block-type,inline-type のプラグイン指定において、
