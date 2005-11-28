@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.6 2005/11/22 00:20:24 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.7 2005/11/27 00:20:24 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -382,7 +382,7 @@ function plugin_tracker_plus_list_action()
 {
 	global $script,$vars,$_tracker_messages;
 
-	$page = $refer = $vars['page'];
+	$page = $refer = $vars['opage'];
 	$orefer = $vars['orefer'];
 	if( $orefer == NULL) $orefer = $refer;
 	$s_orefer = make_pagelink($orefer);
@@ -410,7 +410,7 @@ function plugin_tracker_plus_list_action()
 	if( $dynamicFilter )
 	{
 		$filter_name = $vars['value'];
- 	}
+	}
 	
 	return array(
 		     'msg' => str_replace('$1',$page,$_tracker_messages['msg_list']),
@@ -635,7 +635,7 @@ class Tracker_plus_list extends Tracker_list
 		}
 		$title = $this->fields[$field]->title;
 
-		$r_page = rawurlencode($this->page);
+		$r_opage = rawurlencode($this->page);
 		$r_orefer = rawurlencode($this->orefer);
 		$r_config = rawurlencode($this->config->config_name);
 		$r_list = rawurlencode($this->list);
@@ -653,7 +653,7 @@ class Tracker_plus_list extends Tracker_list
 		if( $this->cache['verbs'] ) $_cache = -1 * $_cache;
 		$r_cache = rawurlencode($_cache);
 		
-		return "[[$title$arrow>$script?plugin=tracker_plus_list&page=$r_page&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
+		return "[[$title$arrow>$script?plugin=tracker_plus_list&opage=$r_opage&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
 	}
 
 	function get_selector($filter)
@@ -665,9 +665,9 @@ class Tracker_plus_list extends Tracker_list
 
 		$optionsHTML = $filter->get_options_html();
 
-		$s_page = htmlspecialchars($this->page);
 		$s_refer = htmlspecialchars($this->refer);
 		$s_orefer = htmlspecialchars($this->orefer);
+		$s_opage = htmlspecialchars($this->page);
 		$s_config = htmlspecialchars($this->config->config_name);
 		$s_list = htmlspecialchars($this->list);
 		$s_order = htmlspecialchars($this->$order);
@@ -684,8 +684,8 @@ $_msg_tracker_plus_list_filter_label : <select name="value" style="vertical-alig
 $optionsHTML
 </select>
 <input type="hidden" name="plugin" value="tracker_plus_list" />
-<input type="hidden" name="page"   value="$s_page" />
 <input type="hidden" name="refer"  value="$s_refer" />
+<input type="hidden" name="opage"  value="$s_opage" />
 <input type="hidden" name="orefer" value="$s_orefer" />
 <input type="hidden" name="config" value="$s_config" />
 <input type="hidden" name="list"   value="$s_list" />
