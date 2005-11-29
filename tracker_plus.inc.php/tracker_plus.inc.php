@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.7 2005/11/27 00:20:24 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.7 2005/11/30 01:55:35 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -678,7 +678,7 @@ class Tracker_plus_list extends Tracker_list
 		$s_cache = htmlspecialchars($_cache);
 
 		$selector_html = <<< EOD
-<form action="$s_script" method="post" style="margin:0;">
+<form action="$s_script" method="get" style="margin:0;">
 <div>
 $_msg_tracker_plus_list_filter_label : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
 $optionsHTML
