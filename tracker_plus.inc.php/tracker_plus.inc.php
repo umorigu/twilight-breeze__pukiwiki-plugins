@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.7 2005/11/30 01:55:35 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.8 2005/11/30 23:24:24 jjyun Exp $
 // Copyright (C) 
 //   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -452,7 +452,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
 		
-		$filter_selector = $list->get_selector($list_filter);
+		$filter_selector = $list->get_selector($list_filter, $order);
 		$list_filter->filter($list);
 		unset($list_filter);
 	}
@@ -656,7 +656,7 @@ class Tracker_plus_list extends Tracker_list
 		return "[[$title$arrow>$script?plugin=tracker_plus_list&opage=$r_opage&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
 	}
 
-	function get_selector($filter)
+	function get_selector($filter,$order)
 	{
 		global $_msg_tracker_plus_list_filter_label;
 
@@ -670,7 +670,7 @@ class Tracker_plus_list extends Tracker_list
 		$s_opage = htmlspecialchars($this->page);
 		$s_config = htmlspecialchars($this->config->config_name);
 		$s_list = htmlspecialchars($this->list);
-		$s_order = htmlspecialchars($this->$order);
+		$s_order = htmlspecialchars($order);
 		$s_filter = htmlspecialchars($filter->name);
 
 		$_cache = ( $this->cache['level'] == $this->cache_level['LV2'] ) ? $this->cache_level['LV1'] : $this->cache['level'];
