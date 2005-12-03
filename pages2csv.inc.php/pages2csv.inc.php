@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 1.0 2005/07/02 23:21:21 jjyun Exp $
+// $Id: pages2csv.inc.php,v 1.1 2005/12/04 02:48:31 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -220,18 +220,17 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 	$list_filter = NULL;
 	if($filter_name != NULL)
 	{
-		$filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
+		$filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config->config_name.'/filters');
 		
-		if(!$filter_config->read())
+		if(! $filter_config->read() )
 		{
 			// filter の設定がなされていなければ、エラーログを返す
-		  return array( 'result' => FALSE,
-				'msg' => "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>",
+			return array( 'result' => FALSE,
+				      'msg' => "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>",
 				);
 		}
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
 	}
-	unset($filger_config);
 
 	// pages2csv の extract設定
 	$extract_arg_filter = NULL;
@@ -253,7 +252,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 	// 出力内容の取得
 	$pstr = plugin_pages2csv_getcsvlist($s_page,$refer,$config,$list,$order,$limit,
 					    $list_filter, $extract_arg_filter);
-	
+
 	// 出力内容のエンコーディング処理
 	if ($encode != '' )
 	{
@@ -267,7 +266,7 @@ function plugin_pages2csv_upload($vars, $refer, $s_page, $pass)
 		}
 		else 
 		{
-			$pstr=mb_convert_encoding($pstr,$encode);
+			$pstr = mb_convert_encoding($pstr,$encode);
 		}
 	}
 
@@ -343,12 +342,12 @@ function plugin_pages2csv_getcsvlist($page,$refer,$config,$list,$order='', $limi
 
 	$list = &new Pages2csv_Tracker_csvlist($page,$refer,$config,$list, $filter_name,
 					       $extract_arg_filter);
+
 	if($list_filter != NULL)
 	{
-		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+		// $list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+		$list_filter->filter($list);
 	}
-	$list->sort($order);
-
 	return $list->toString($limit);
 }
 
