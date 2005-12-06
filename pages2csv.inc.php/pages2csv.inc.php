@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 1.1 2005/12/04 02:48:31 jjyun Exp $
+// $Id: pages2csv.inc.php,v 1.2 2005/12/07 01:30:40 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -434,8 +434,9 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 	{
 		global $_tracker_messages;
       
-		$source = '';
 		$body = array();
+		$header = '';
+		$footer = '';
 		
 		if($limit != NULL and count($this->rows) > $limit)
 		{
@@ -449,14 +450,26 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 
 		foreach(plugin_tracker_get_source($this->config->page . '/' . $this->list) as $line)
 		{
+			if (preg_match('/^\|(.+)\|[cC]$/',$line) )
+			{
+				continue;
+			}
 			if (preg_match('/^\|(.+)\|[hH]$/',$line) )
 			{
 				// 表定義のパイプ区切りをCSV形式区切りに変更
-			        // $line = preg_replace('/^",(.+),"|[hH]$/','$1',$line);
+				// $line = preg_replace('/^",(.+),"|[hHfF]$/','$1',$line);
 			        $line = preg_replace('/\|/',',', $line); 
 			        $line = preg_replace('/\~/','', $line); 
 				
-				$source .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
+				$header .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
+			}
+			if (preg_match('/^\|(.+)\|[fF]$/',$line) )
+			{
+			        $line = preg_replace('/\|/',',', $line); 
+			        $line = preg_replace('/\~/','', $line); 
+				
+				$footer .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
+
 			}
 			else
 			{
@@ -470,9 +483,16 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 		
 		// create header 
 		$header_arr = array();
-		$header_arr = explode(",", $source);
+		$header_arr = explode(",", $header);
 		array_shift($header_arr);
 		array_pop($header_arr);
+
+		// create footer
+		$footer_arr = array();
+		$footer_arr = explode(",", $footer);
+		array_shift($footer_arr);
+		array_pop($footer_arr);
+
 		$source = '"' . implode($header_arr,'","') . '"'. "\n";
 
 		foreach($this->rows as $key=>$row)
@@ -492,6 +512,11 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
 				$this->pipe = ($line{0} == '|' or $line{0} == '\:');
 				$source .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_item'),$line);
 			}
+		}
+
+		if( count( $footer_arr) > 0)
+		{
+			$source .= '"' . implode($footer_arr,'","') . '"'. "\n";
 		}
 		return $source;
 	}
