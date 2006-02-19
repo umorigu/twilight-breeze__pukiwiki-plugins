@@ -1238,7 +1238,7 @@ class Tracker_plus_list_filter
 					$format_enc = $matches[3];
 				}
 			}
-			$s_format = 'style='.$opt_format;
+			$s_format = ( strlen($opt_format) > 0 ) ? 'style='.$opt_format : "";
 		}
 
 		return array($s_label, $s_format);
