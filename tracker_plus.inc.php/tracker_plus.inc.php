@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.8 2005/11/30 23:24:24 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.9beta 2006/02/23 08:56:32 jjyun Exp $
 // Copyright (C) 
-//   2004-2005 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
+//   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
 //
 // Issue from tracker.inc.php plugin (See Also bugtrack plugin)
@@ -20,7 +20,6 @@ define('TRACKER_PLUS_LIST_EXCLUDE_PATTERN','#^SubMenu$|/#');
 // 項目の取り出しに失敗したページを一覧に表示する
 define('TRACKER_PLUS_LIST_SHOW_ERROR_PAGE',TRUE);
 
-
 /////////////////////////////////////////////////////////////////////////////
 // CacheLevelのデフォルトの設定
 // ** 設定値の説明 ** 負の値は冗長モードを表します
@@ -32,24 +31,34 @@ define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 0);
 // define('TRACKER_PLUS_LIST_CACHE_DEFAULT', 2); 
 
 /////////////////////////////////////////////////////////////////////////////
+// [Dynamic Filter Configration Section]
 // フィルタを指定時における、動的フィルタ選択のデフォルト設定
 //  ** 設定値の説明 ** filter名の頭に + or - を付けるとリスト表示の制御は可能ですが...
 //   TRUE : filter名の先頭に + を指定しなくてもフィルタ選択用のリストを表示します
 //  FALSE : filter名の先頭に + を指定しないと、フィルタ選択用のリストは表示しません
 define('TRACKER_PLUS_LIST_DYNAMIC_FILTER_DEFAULT', TRUE);
-
+//
 /////////////////////////////////////////////////////////////////////////////
 // 動的フィルタのリストラベルの拡張設定
 define('TRACKER_PLUS_LIST_APPLY_LISTFORMAT',TRUE);
 
 //////////////////////////////////////////////////////////////////////////////
-// ** TRACKER_PLUS FILTER CONSTANT DEFINISION ** 
-// If you want to keep compatible to before 2.5, 
-//   you should define below values "かつ" and "除外" respectively.
-define('TRACKER_PLUS_FILTER_AND_CONDITION', "かつ" );      // "かつ" or "AND"
-define('TRACKER_PLUS_FILTER_EXCLUDE_CONDITION', "除外");   // "除外" or "EXCLUDE" 
-//////////////////////////////////////////////////////////////////////////////
-define('TRACKER_PLUS_FILTER_EXTENDED_SETTING_TITLE', "拡張見出し"); // "見出し設定" or "EXTENTED_TITLE" 
+// [Paging Configration Section] 
+// リスト表示時のページング機能の設定
+// 0: Disable paging ( same as tracker.inc.php)
+// 1:  Enable paging with only LinkMark.
+// 2:  Enable paging with only less/more MarkStr.
+// 3:  Enable paging with LinkMark and less/more MarkStr.
+//define('TRACKER_PLUS_LIST_PAGING', 0); 
+//define('TRACKER_PLUS_LIST_PAGING', 1);
+//define('TRACKER_PLUS_LIST_PAGING', 2);
+define('TRACKER_PLUS_LIST_PAGING', 3);
+// 一度に表示する linkMark の数 
+define('TRACKER_PLUS_LIST_PAGING_MARK_NUMBER_PER_ONCE', 10);
+
+// *** Definition for codes, Don't modify...***
+define('TRACKER_PLUS_LIST_PAGING_ENABLE_LINKMARK', 1); 
+define('TRACKER_PLUS_LIST_PAGING_ENABLE_STRGMARK', 2); 
 
 function plugin_tracker_plus_init()
 {
@@ -66,18 +75,42 @@ function plugin_tracker_plus_init()
 function plugin_tracker_plus_init_ja()
 {
 	$msg = array(
-		'_msg_tracker_plus_list_filter_label' => "絞り込み条件一覧",
-		'_msg_tracker_plus_list_nodata' => "一覧に表示する項目はありません.",
-	);
+     //		'_tracker_plus_msg' => array(),
+		'_tracker_plus_list_msg' => array(
+			'nodata'             => '一覧に表示する項目はありません.',
+			'paging'             => '全 $1件中、$2 件目 から $3 件目 まで表示しています.' ,
+			'paging_linkMark'    => '■',
+			'paging_lessMark'    => '《',
+			'paging_moreMark'    => '》',
+			'paging_lessMarkStr' => '[前の $1 件]',
+			'paging_moreMarkStr' => '[次の $1 件]',
+			'filter_and'         => 'かつ',  // TRACKER_PLUS FILTER CONSTANT DEFINISION 
+			'filter_exclude'     => '除外',  // TRACKER_PLUS FILTER CONSTANT DEFINISION 
+			'filter_label' 	     => '絞り込み条件一覧',
+			'filter_extTitle'    => '拡張見出し',
+		)
+	); 
 	return $msg;
 }
 
 function plugin_tracker_plus_init_en()
 {
-	$msg = array(
-		'_msg_tracker_plus_list_filter_label' => "Tracker_List FilterList",
-		'_msg_tracker_plus_list_nodata' => "There is no item displayed in List.",
-	);
+ 	$msg = array(
+     //		'_tracker_plus_msg' => array(),
+		'_tracker_plus_list_msg' => array(
+ 			'nodata'             => 'There is no item displayed in List.',
+			'paging'             => 'This displays it from the $2 th to the $3 th among $1.',
+			'paging_linkMark'    => '■',
+			'paging_lessMark'    => '《',
+			'paging_moreMark'    => '》',
+			'paging_lessMarkStr' => '[Before $1 ]',
+			'paging_moreMarkStr' => '[Next $1 ]',
+			'filter_and'         => 'AND',     // TRACKER_PLUS FILTER CONSTANT DEFINISION 
+			'filter_exclude'     => 'EXCLUDE', // TRACKER_PLUS FILTER CONSTANT DEFINISION 
+			'filter_label'       => 'Tracker_List FilterList',
+			'filter_extTitle'    => 'EXTENTED_TITLE',
+		)
+ 	);
 	return $msg;
 }
 
@@ -394,6 +427,9 @@ function plugin_tracker_plus_list_action()
 	$cache = isset($vars['cache']) ? $vars['cache'] : NULL;
 	$dynamicFilter = isset($vars['dynamicFilter']) ? true : false;
 
+	$limit = isset($vars['limit']) ? $vars['limit'] : NULL;
+	$pagingNo = isset($vars['paging']) ? $vars['paging'] : NULL;
+
 	// this delete tracker caches. 
 	if( $cache == 'DELALL' )
 	{
@@ -415,12 +451,12 @@ function plugin_tracker_plus_list_action()
 	return array(
 		     'msg' => str_replace('$1',$page,$_tracker_messages['msg_list']),
 		     'body'=> str_replace('$1',$s_orefer,$_tracker_messages['msg_back']).
-		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,NULL,$filter_name,$cache, $orefer)
+		     plugin_tracker_plus_getlist($page,$refer,$config,$list,$order,$limit,$filter_name,$cache, $orefer, $pagingNo)
 	);
 }
 
 function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $order = '', $limit = NULL,
-				     $filter_name = NULL, $cache, $orefer = NULL)
+				     $filter_name = NULL, $cache, $orefer = NULL, $pagingNo = 0)
 {
 	$config = new Config('plugin/tracker/'.$config_name);
 
@@ -459,7 +495,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 
 	$list->sort($order);
 	
-	return $filter_selector . $list->toString($limit);
+	return $filter_selector . $list->toString($limit, $pagingNo);
 }	
 
 class Tracker_plus_FilterConfig extends Config
@@ -658,7 +694,7 @@ class Tracker_plus_list extends Tracker_list
 
 	function get_selector($filter,$order)
 	{
-		global $_msg_tracker_plus_list_filter_label;
+		global $_tracker_plus_list_msg;
 
 		if( ! $filter->filter_select ) return "";
 		if( $orefer == NULL) $orefer = $refer;
@@ -680,7 +716,7 @@ class Tracker_plus_list extends Tracker_list
 		$selector_html = <<< EOD
 <form action="$s_script" method="get" style="margin:0;">
 <div>
-$_msg_tracker_plus_list_filter_label : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
+$_tracker_plus_list_msg[filter_label] : <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
 $optionsHTML
 </select>
 <input type="hidden" name="plugin" value="tracker_plus_list" />
@@ -699,28 +735,153 @@ EOD;
 		return $selector_html;
 	}
 
+	// It is called only from toString. (Ver2.9- ) 
+	function make_paging_links($limit, $pagingNo)
+	{
+		global $_tracker_plus_list_msg;
+
+		$maxListedMarkNum = TRACKER_PLUS_LIST_PAGING_MARK_NUMBER_PER_ONCE;
+
+		$abovePgLink = "";
+		$belowPgLink = "";
+
+		$start = $limit * $pagingNo;
+
+		$total = count($this->rows);
+		$offset = floor($pagingNo / $maxListedMarkNum ) * $maxListedMarkNum;
+
+		if( ( TRACKER_PLUS_LIST_PAGING & TRACKER_PLUS_LIST_PAGING_ENABLE_LINKMARK ) == TRACKER_PLUS_LIST_PAGING_ENABLE_LINKMARK )
+		{
+			for( $i = 0 ; ($offset + $i) * $limit < $total && $i < $maxListedMarkNum ; $i++ )
+			{ 
+				$linkMark    = $_tracker_plus_list_msg['paging_linkMark'];
+				$abovePgLink .= $this->make_paging_link($limit, $offset + $i, $linkMark); 
+
+			}
+
+			if( $offset > 0 )
+			{
+				$lessMark    = $_tracker_plus_list_msg['paging_lessMark'];
+				$abovePgLink = 
+				  $this->make_paging_link($limit, $offset - $maxListedMarkNum , $lessMark) . '&nbsp;' . $abovePgLink;
+			}
+
+			if( ($offset + $maxListedMarkNum) * $limit < $total )
+			{
+				$moreMark    = $_tracker_plus_list_msg['paging_moreMark'];
+				$abovePgLink = 
+				  $abovePgLink . '&nbsp;' . $this->make_paging_link($limit, $offset + $maxListedMarkNum, $moreMark);
+			}
+
+			if( strlen( $abovePgLink ) > 0 )
+			{
+				$abovePgLink = "<div class='tracker_plus_list_paging_marklist'>" . $abovePgLink . "</div>";
+			}
+		}
+
+		if( ( TRACKER_PLUS_LIST_PAGING & TRACKER_PLUS_LIST_PAGING_ENABLE_STRGMARK ) == TRACKER_PLUS_LIST_PAGING_ENABLE_STRGMARK )
+		{
+			if( $pagingNo > 0 )
+			{
+				$lessMarkStr =
+				  str_replace( array('$1'), array($limit), $_tracker_plus_list_msg['paging_lessMarkStr']);
+				$belowPgLink .= $this->make_paging_link($limit, $pagingNo - 1 , $lessMarkStr) . '&nbsp;' ;
+			}
+				
+			if( ($pagingNo + 1) * $limit < $total )
+			{
+				$moreMarkStr = 
+				  str_replace( array('$1'), array($limit), $_tracker_plus_list_msg['paging_moreMarkStr']);
+				$belowPgLink  .= $this->make_paging_link($limit, $pagingNo + 1 , $moreMarkStr);
+			}
+			
+			if( strlen( $belowPgLink ) > 0 )
+			{
+				$belowPgLink = "<div class='tracker_plus_list_paging_markstr'>" . $belowPgLink . "</div>";
+			}
+		}
+		
+		$showMax = ( ($pagingNo + 2) * $limit > $total) ? $total : ($pagingNo + 1) * $limit;
+		$pagingStatus = str_replace( array('$1','$2','$3'),
+					    array( $total, $limit * $pagingNo + 1 , $showMax),
+					     $_tracker_plus_list_msg['paging']);
+		$abovePgLink = "<div class='tracker_plus_list_paging_status'>". $pagingStatus . "</div>" . $abovePgLink;
+
+ 		return array($abovePgLink, $belowPgLink);
+	}
+
+	// It is called only from make_paging_links(). (Ver2.9- ) 
+	function make_paging_link($limit, $pagingNo,$mark)
+	{
+		global $script;
+
+		$r_opage = rawurlencode($this->page);
+		$r_orefer = rawurlencode($this->orefer);
+		$r_config = rawurlencode($this->config->config_name);
+		$r_list = rawurlencode($this->list);
+		$_order = array();
+		$order = $this->order;
+		if (is_array($order))
+		{
+			foreach ($order as $key=>$value)
+			{
+				$_order[] = "$key:$value";
+			}
+		}
+		$r_order = rawurlencode(join(';',$_order));
+
+		// attension : if you modified this, you should also see $this->get_selector()
+		$_filter = ($this->dynamic_filter) ? "+". $this->filter_name : $this->filter_name; 
+		$r_filter = rawurlencode($_filter);
+
+		$_cache = ( $this->cache['level'] == $this->cache_level['LV2'] ) ? $this->cache_level['LV1'] : $this->cache['level'];
+		if( $this->cache['verbs'] ) $_cache = -1 * $_cache;
+		$r_cache = rawurlencode($_cache);
+		
+		$r_limit  = rawurlencode($limit);
+		$r_pageNo = rawurlencode($pagingNo);
+
+  		$r_newpage = "plugin=tracker_plus_list&opage=$r_opage&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache&limit=$r_limit&paging=$r_pageNo";
+  		$r_pglabel = $limit * $pagingNo + 1;
+  		return '<a href="' . $script . '?' . $r_newpage . '" title="' . $r_pglabel . '- ">'. $mark . '</a> '; 
+//		return "[[$mark>$script?plugin=tracker_plus_list&opage=$r_opage&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache&limit=$r_limit&paging=$r_pageNo]]";
+
+	}
+
 	// over-wride function.
-	function toString($limit=NULL)
+	function toString($limit=NULL,$pagingNo=0)
 	{
 		global $_tracker_messages;
-		global $_msg_tracker_plus_list_nodata;
+		global $_tracker_plus_list_msg;
 
 		$source = '';
-		$sort_types = '';
+		//	$sort_types = '';
+
+		// for paging variables.
+		$abovePgLink = "";
+		$belowPgLink = "";
 
 		$body = array();
 
 		if ($limit !== NULL and count($this->rows) > $limit)
 		{
-			$source = str_replace(
-				array('$1','$2'),
-				array(count($this->rows),$limit),
-				$_tracker_messages['msg_limit'])."\n";
-			$this->rows = array_splice($this->rows,0,$limit);
+			if( TRACKER_PLUS_LIST_PAGING > 0 )
+			{ 
+				list($abovePgLink, $belowPgLink) = $this->make_paging_links($limit, $pagingNo);
+				$this->rows = array_splice( $this->rows, $start, $limit);
+			}
+			else
+			{
+				$source = str_replace(
+					array('$1','$2'),
+					array(count($this->rows),$limit),
+					$_tracker_messages['msg_limit'])."\n";
+				$this->rows = array_splice($this->rows,0,$limit);
+			}
 		}
 		if (count($this->rows) == 0)
 		{
-			return $_msg_tracker_plus_list_nodata;
+			return $_tracker_plus_list_msg['nodata'];
 		}
 
 		$htmls = $this->get_cache_cnvrt();
@@ -736,7 +897,7 @@ EOD;
 			{
 				$source .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
 
-  				// for sortable table
+//  				// for sortable table
 //   				if(preg_match('/^\|(.+)\|[hH]$/',$line))
 //   				{
 //   					$sort_types .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'get_sort_type'),$line);
@@ -748,7 +909,9 @@ EOD;
 			}
 		}
 
-		$lineno = 1;
+		
+		$lineno = ( $limit === NULL ) ? 0 : ($limit * $pagingNo);
+		$lineno += 1;
 		foreach ($this->rows as $key=>$row)
 		{
 			if (!TRACKER_PLUS_LIST_SHOW_ERROR_PAGE and !$row['_match'])
@@ -773,11 +936,6 @@ EOD;
 
 		$htmls = convert_html($source);
 
-		/////////////////////////////////
-		// for sortable_script
-		// It work, but It isn't currectly , why? (2005/05/06)
-		// $htmls = $this->make_sortable_script($htmls, $sort_types);
-
 		$this->put_cache_cnvrt($htmls);
 
 		if($this->cache['verbs'] == TRUE) 
@@ -785,64 +943,69 @@ EOD;
 			$htmls .= $this->get_verbose_cachestatus();
 		}
 
-		return $htmls;
-	}
-
-	// original functions.
-	function make_sortable_script($htmls,$sort_types)
-	{
-		$js = '<script type="text/javascript" src="' . SKIN_DIR . 'sortabletable.js"></script>';
-
-		$sort_types = convert_html($sort_types);
-		$sort_types = strip_tags($sort_types);
-		
-		$sort_types_arr = array();
-		$sort_types_arr = explode(",", $sort_types);
-		array_pop($sort_types_arr);
-
-		$sort_types_str = '"' . implode($sort_types_arr,'","') . '"';
-
-		$number = plugin_tracker_plus_getNumber();
-		$htmls = strstr($htmls, "<thead>");
-		$htmls = '<div class="ie5"><table class="style_table" id="tracker_plus_list_' . $number . '" cellspacing="1" border="0">' . $htmls;
-		if( $number == 0 ) $htmls = $js . $htmls;
-
- 		$htmls .= <<<EOF
-<script type="text/javascript">
-var st1 = new SortableTable(document.getElementById("tracker_plus_list_$number"), [$sort_types_str]);
-</script>
-EOF;
-		return $htmls;
-	}
-
-	function get_sort_type($arr)
-	{
-		$field = $arr[1];
-		if (!array_key_exists($field,$this->fields))
+		if( TRACKER_PLUS_LIST_PAGING > 0 )
 		{
-			return $arr[0];
+			$htmls = $abovePgLink . $htmls . $belowPgLink;
 		}
-		$sort_type = $this->fields[$field]->sort_type;
 
- 		if( $sort_type == SORT_NUMERIC )
- 		{
- 			$ret= 'Number';
- 		}
- 		else if ( $sort_type == SORT_STRING )
- 		{
- 			$ret = 'String';
- 		}
- 		else if ( $sort_type == SORT_REGULAR )
- 		{
- 			$ret = 'CaseInsensitiveString';
- 		}
- 		else
- 		{
- 			$ret= 'Number';
- 		}
-
-		return "$ret,";
+		return $htmls;
 	}
+
+// 	// original functions.
+// 	function make_sortable_script($htmls,$sort_types)
+// 	{
+// 		$js = '<script type="text/javascript" src="' . SKIN_DIR . 'sortabletable.js"></script>';
+
+// 		$sort_types = convert_html($sort_types);
+// 		$sort_types = strip_tags($sort_types);
+		
+// 		$sort_types_arr = array();
+// 		$sort_types_arr = explode(",", $sort_types);
+// 		array_pop($sort_types_arr);
+
+// 		$sort_types_str = '"' . implode($sort_types_arr,'","') . '"';
+
+// 		$number = plugin_tracker_plus_getNumber();
+// 		$htmls = strstr($htmls, "<thead>");
+// 		$htmls = '<div class="ie5"><table class="style_table" id="tracker_plus_list_' . $number . '" cellspacing="1" border="0">' . $htmls;
+// 		if( $number == 0 ) $htmls = $js . $htmls;
+
+//  		$htmls .= <<<EOF
+// <script type="text/javascript">
+// var st1 = new SortableTable(document.getElementById("tracker_plus_list_$number"), [$sort_types_str]);
+// </script>
+// EOF;
+// 		return $htmls;
+// 	}
+
+// 	function get_sort_type($arr)
+// 	{
+// 		$field = $arr[1];
+// 		if (!array_key_exists($field,$this->fields))
+// 		{
+// 			return $arr[0];
+// 		}
+// 		$sort_type = $this->fields[$field]->sort_type;
+
+//  		if( $sort_type == SORT_NUMERIC )
+//  		{
+//  			$ret= 'Number';
+//  		}
+//  		else if ( $sort_type == SORT_STRING )
+//  		{
+//  			$ret = 'String';
+//  		}
+//  		else if ( $sort_type == SORT_REGULAR )
+//  		{
+//  			$ret = 'CaseInsensitiveString';
+//  		}
+//  		else
+//  		{
+//  			$ret= 'Number';
+//  		}
+
+// 		return "$ret,";
+// 	}
 
 	function get_cache_filename()
 	{
@@ -1212,12 +1375,14 @@ class Tracker_plus_list_filter
 
 	function get_option_style($filter_name)
 	{
+		global $_tracker_plus_list_msg;
+
 		$s_label = $filter_name;
 		$s_format = "";
 
 		foreach( $this->config->after_read($filter_name) as $options)
 		{
-			if($options[0] != TRACKER_PLUS_FILTER_EXTENDED_SETTING_TITLE ) continue;
+			if($options[0] != $_tracker_plus_list_msg['filter_extTitle'] ) continue;
 
 			$s_label=$options[1];
 			$s_format=$options[2];
@@ -1255,12 +1420,14 @@ class Tracker_plus_list_filterCondition
   
 	function Tracker_plus_list_filterCondition($field,$name)
 	{
+  		global $_tracker_plus_list_msg;
+
 		$this->name = $name;
-		$this->is_cnctlogic_AND = ($field[0] == TRACKER_PLUS_FILTER_AND_CONDITION ) ? true : false ;
+		$this->is_cnctlogic_AND = ($field[0] == $_tracker_plus_list_msg['filter_and'] ) ? true : false ;
 		$this->target = $field[1];
 		$this->matches = preg_quote($field[2],'/');
 		$this->matches = implode(explode(',',$this->matches) ,'|');
-		$this->is_exclued = ($field[3] == TRACKER_PLUS_FILTER_EXCLUDE_CONDITION ) ? true : false ;
+		$this->is_exclued = ($field[3] == $_tracker_plus_list_msg['filter_exclude'] ) ? true : false ;
 	}
   
 	function filter($var)
