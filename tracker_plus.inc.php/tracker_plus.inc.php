@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.9 2006/02/25 08:56:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.9 2006/02/25 22:56:32 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -745,8 +745,6 @@ EOD;
 		$abovePgLink = "";
 		$belowPgLink = "";
 
-		$start = $limit * $pagingNo;
-
 		$total = count($this->rows);
 		$offset = floor($pagingNo / $maxListedMarkNum ) * $maxListedMarkNum;
 
@@ -868,7 +866,7 @@ EOD;
 			if( TRACKER_PLUS_LIST_PAGING > 0 )
 			{ 
 				list($abovePgLink, $belowPgLink) = $this->make_paging_links($limit, $pagingNo);
-				$this->rows = array_splice( $this->rows, $start, $limit);
+				$this->rows = array_splice( $this->rows, $limit * $pagingNo, $limit);
 			}
 			else
 			{
