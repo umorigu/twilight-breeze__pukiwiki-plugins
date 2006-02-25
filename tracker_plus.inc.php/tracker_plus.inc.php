@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.9beta 2006/02/23 08:56:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.9 2006/02/25 08:56:32 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -107,7 +107,7 @@ function plugin_tracker_plus_init_en()
 			'paging_moreMarkStr' => '[Next $1 ]',
 			'filter_and'         => 'AND',     // TRACKER_PLUS FILTER CONSTANT DEFINISION 
 			'filter_exclude'     => 'EXCLUDE', // TRACKER_PLUS FILTER CONSTANT DEFINISION 
-			'filter_label'       => 'Tracker_List FilterList',
+			'filter_label'       => 'FilterList of TrackerList',
 			'filter_extTitle'    => 'EXTENTED_TITLE',
 		)
  	);
