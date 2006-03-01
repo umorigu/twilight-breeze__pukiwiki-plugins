@@ -1,15 +1,22 @@
 <?php
-/////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.7 2005/07/02 12:24:34 jjyun Exp $
+// $Id: listbox3.inc.php,v 0.9 2006/03/02 06:20:21 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
+// -----------------------------------------------------------------
+// Copyright (C)
+//   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
+// License: GPL v2 or (at your option) any later version
+//
 
 // 修正後のリロード時に、編集箇所へ表示箇所を移す
 // 有効にする場合には、TRUE , 無効にする場合には FALSE を指定
-define('LISTBOX3_JUMP_TO_MODIFIED_PLACE',TRUE); // TRUE or FALSE
+define('LISTBOX3_JUMP_TO_MODIFIED_PLACE',FALSE); // TRUE or FALSE
 // リストアイテムに書式を適用する(色指定のみ)
 define('LISTBOX3_APPLY_FORMAT',TRUE); // TRUE or FALSE
+// モード変更を適用する
+define('LISTBOX3_APPLY_MODECHANGE',TRUE); // TRUE or FALSE
 
 function plugin_listbox3_action() {
   global $script, $vars;
@@ -36,16 +43,19 @@ function plugin_listbox3_action() {
     $pagedata .= $line;
   }
   page_write($vars['refer'], $pagedata);
-  if( LISTBOX3_JUMP_TO_MODIFIED_PLACE && $pagedata != '' ) {
+  if( LISTBOX3_JUMP_TO_MODIFIED_PLACE && $pagedata != '' )
+  {
     header("Location: $script?".rawurlencode($vars['refer'])."#listbox3_no_".$vars['number']);
     exit;
   }
   return array('msg' => '', 'body' => '');
 }
 
-function plugin_listbox3_convert()
-{
-  global $head_tags;
+// header宣言の中で以下の２つの定義を行う
+// ・Javasciptを用いること、
+// ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
+function plugin_listbox3_headDeclaration() {
+  global $pkwk_dtd, $javascript;
 
   // <head> タグ内への <meta>宣言の追加
   $meta_str =
@@ -54,15 +64,38 @@ function plugin_listbox3_convert()
     $head_tags[] = $meta_str;
   }
 
+  // Javasciptを用いること、<form>タグにname属性を用いることを通知する
+  if( PKWK_ALLOW_JAVASCRIPT && LISTBOX3_APPLY_MODECHANGE )
+  {
+    // XHTML 1.0 Transitional
+    if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
+    $pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
+    
+    // <head> タグ内への <meta>宣言の追加
+    $javascript = TRUE;
+  }
+}
+
+function plugin_listbox3_convert()
+{
+  global $head_tags;
+
   $number = plugin_listbox3_getNumber();
+
+  // header の宣言
+  if( $number == 0 )
+  {
+    plugin_listbox3_headDeclaration();
+  }
+
   if(func_num_args() > 1)
-    {
+  {
       $options = func_get_args();
       $value     = array_shift($options);
       $template  = array_shift($options);
       $fieldname = array_shift($options);
       return plugin_listbox3_getBody($number, $value, $template, $fieldname);
-    }
+  }
   return FALSE;
 }
 
@@ -70,34 +103,69 @@ function plugin_listbox3_getNumber() {
   global $vars;
   static $numbers = array();
   if (!array_key_exists($vars['page'],$numbers))
-    {
+  {
       $numbers[$vars['page']] = 0;
-    }
+  }
   return $numbers[$vars['page']]++;
 }
 
-function plugin_listbox3_getBody($number, $value, $template, $fieldname) {
+function plugin_listbox3_getBody($number, $value, $template, $fieldname)
+{
   global $script, $vars;
   $page_enc = htmlspecialchars($vars['page']);
   $script_enc = htmlspecialchars($script);
+  $body = '';
+
+  // listbox3 用の<script>タグの挿入 ( for LISTBOX3_APPLY_MODECHANGE )
+  if( PKWK_ALLOW_JAVASCRIPT && LISTBOX3_APPLY_MODECHANGE )
+  {
+    $body .= ($number == 0) ? plugin_listbox3_getScript() : '';
+  }
+
   $options_html = plugin_listbox3_getOptions($value, $template, $fieldname);
-  $body = <<<EOD
-    <form action="$script_enc" method="post" style="margin:0;"> 
-    <div>
-    <a id="listbox3_no_$number">
+  $imagePath = IMAGE_DIR;
+  $editImage = 'paraedit.png';
+  $referImage = 'close.png';
+  $body .= <<<EOD
     <select name="value" style="vertical-align:middle" onchange="this.form.submit();">
     $options_html
     </select>
     <input type="hidden" name="number" value="$number" />
     <input type="hidden" name="plugin" value="listbox3" />
-    <input type="hidden" name="refer" value="$page_enc" />
-    </a>
-    </div>
-    </form>
+    <input type="hidden" name="refer"  value="$page_enc" />
 EOD;
-  //$body = preg_replace("/\s+</", '<', $body);
-  //$body = preg_replace("/>\s+/", '>', $body);
+
+  if( PKWK_ALLOW_JAVASCRIPT && LISTBOX3_APPLY_MODECHANGE )
+  {
+    $body .= <<< EOD
+    <img name="editTrigger" src="$imagePath$editImage" 
+     onload="listbox3_enableSelector( document.listbox3$number,'$referImage' );"
+    onclick="listbox3_changeEditTriggerImage( document.listbox3$number, '$editImage', '$referImage','$imagePath' );" />
+EOD;
+  }
+  
+  if( LISTBOX3_JUMP_TO_MODIFIED_PLACE )
+  {
+    $body = <<< EOD
+    <a id="listbox3_no_$number">
+    $body
+    </a>
+EOD;
+  }
+
+  $body = <<< EOD
+  <form name="listbox3$number" action="$script_enc" method="post" style="margin:0;"> 
+  <div>
+  $body
+  </div>
+  </form>
+EOD;
   return $body;
+}
+
+function plugin_listbox3_getScript() {
+  $js = '<script type="text/javascript" src="'. SKIN_DIR . 'listbox3.js" ></script>';
+  return $js;
 }
 
 function plugin_listbox3_getOptions($value, $config_name, $field_name) {
@@ -109,7 +177,6 @@ function plugin_listbox3_getOptions($value, $config_name, $field_name) {
       htmlspecialchars($config_name)."' not found.</p>";    
   }
   $config->name = $config_name;
-
 
   $isSelect = 0;
   foreach($config->get($field_name) as $options) {
