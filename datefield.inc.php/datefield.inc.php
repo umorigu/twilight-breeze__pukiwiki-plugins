@@ -380,7 +380,7 @@ EOD;
 	if( PKWK_ALLOW_JAVASCRIPT && DATEFIELD_APPLY_MODECHANGE )
 	{
 		$body .= <<< EOD
-		<input type="checkbox" name="calendar" value="null" checked=true
+		<input type="checkbox" name="calendar" value="null" checked=false
 			onclick="_plugin_datefield_onclickClndrModal(this.form, event, $format_opt, {$date['year']},{$date['month']},{$date['day']});" />
 EOD;
 	}
