@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 1.3 2006/03/10 01:29:06 jjyun Exp $
+// $Id: datefield.inc.php,v 1.4 2006/03/12 10:46:52 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -352,7 +352,7 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt = ''
 	// 保存された日付から値を取得
 	$formatStr =substr($format_opt,1,strlen($format_opt)-2);
 	$errmsg = plugin_datefield_chkFormat($value,$formatStr);
-	if( strlen($errmsg) == 0 and $caldsp_opt == 'REL')
+	if( strlen($value) != 0 && strlen($errmsg) == 0 and $caldsp_opt == 'REL')
 	{
 		$date= plugin_datefield_getDate($value, $formatStr);
 		/* 指定がない時は 補間する */
@@ -380,7 +380,7 @@ EOD;
 	if( PKWK_ALLOW_JAVASCRIPT && DATEFIELD_APPLY_MODECHANGE )
 	{
 		$body .= <<< EOD
-		<input type="checkbox" name="calendar" value="null" checked=false
+		<input type="checkbox" name="calendar" value="null" checkd=false
 			onclick="_plugin_datefield_onclickClndrModal(this.form, event, $format_opt, {$date['year']},{$date['month']},{$date['day']});" />
 EOD;
 	}
