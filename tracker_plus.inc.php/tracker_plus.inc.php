@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.9 2006/02/25 22:56:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.10 2006/03/12 10:21:32 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -458,6 +458,8 @@ function plugin_tracker_plus_list_action()
 function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $order = '', $limit = NULL,
 				     $filter_name = NULL, $cache, $orefer = NULL, $pagingNo = 0)
 {
+	$limit = ($limit == "" ) ? NULL : $limit;
+
 	$config = new Config('plugin/tracker/'.$config_name);
 
 	if (!$config->read())
@@ -478,7 +480,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 	$filter_selector = '';
 	if($list->filter_name != NULL || $list->dynamic_filter == TRUE )
 	{
-	        $filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config_name.'/filters');
+		$filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config_name.'/filters');
 
 		if( ! $filter_config->read() && $list->filter_name != NULL)
 		{
@@ -488,7 +490,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
 		
-		$filter_selector = $list->get_selector($list_filter, $order);
+		$filter_selector = $list->get_selector($list_filter, $order, $limit);
 		$list_filter->filter($list);
 		unset($list_filter);
 	}
@@ -612,7 +614,7 @@ class Tracker_plus_list extends Tracker_list
 		$this->cache['verbs'] = ($cache < 0) ? TRUE : FALSE;
 		$this->cache['level'] = (abs($cache) <= $this->cache_level['LV2']) ? abs($cache) : $this->cache_level['NO']; 
 
-                // ページの列挙と取り込み
+		// ページの列挙と取り込み
 
 		// cache から cache作成時刻からデータを取り込む
 		// $this->add()での処理の前にあらかじめ cache から取り込んでおくことで、
@@ -692,7 +694,7 @@ class Tracker_plus_list extends Tracker_list
 		return "[[$title$arrow>$script?plugin=tracker_plus_list&opage=$r_opage&orefer=$r_orefer&config=$r_config&list=$r_list&order=$r_order&filter=$r_filter&cache=$r_cache]]";
 	}
 
-	function get_selector($filter,$order)
+	function get_selector($filter,$order,$limit)
 	{
 		global $_tracker_plus_list_msg;
 
@@ -706,6 +708,8 @@ class Tracker_plus_list extends Tracker_list
 		$s_opage = htmlspecialchars($this->page);
 		$s_config = htmlspecialchars($this->config->config_name);
 		$s_list = htmlspecialchars($this->list);
+
+		$s_limit = htmlspecialchars($limit);
 		$s_order = htmlspecialchars($order);
 		$s_filter = htmlspecialchars($filter->name);
 
@@ -725,6 +729,7 @@ $optionsHTML
 <input type="hidden" name="orefer" value="$s_orefer" />
 <input type="hidden" name="config" value="$s_config" />
 <input type="hidden" name="list"   value="$s_list" />
+<input type="hidden" name="limit"  value="$s_limit" />
 <input type="hidden" name="order"  value="$s_order" />
 <input type="hidden" name="filter" value="$s_filter" />
 <input type="hidden" name="cache"  value="$s_cache" />
@@ -732,6 +737,7 @@ $optionsHTML
 </div>
 </form>
 EOD;
+
 		return $selector_html;
 	}
 
@@ -1342,13 +1348,21 @@ class Tracker_plus_list_filter
 		$isSelect = false;
 		$keys = $this->config->get_keys();
 
+		// for difference between servers.
+		// one's $keys has "SelectAll", the other's doesn't have "SelectAll".
+		// This flag is to avoid the difference.
+		$isExistSelectAll = false;
+
 		// attension : if you modified this, you should see Tracker_plus_list::replace_title()
-		$d_select = ($this->filter_select) ? "+" : "";
+		$d_select = ($this->filter_select) ? '+' : '';
 
 		foreach( $keys as $option) 
 		{
 			if( $option == "" )
 				continue;
+
+			if( $option == "SelectAll" )
+				$isExistSelectAll = true;
 
 			$encodedOption = htmlspecialchars($option);
 			list($label, $style) = ( TRACKER_PLUS_LIST_APPLY_LISTFORMAT ) ? 
@@ -1365,8 +1379,11 @@ class Tracker_plus_list_filter
 			}
 		}
 	
-		$allSelected = ( $isSelect ) ? "" : "selected='selected'" ;
-		$optionsHTML = "<option value='SelectAll' $allSelected >SelectAll</option>"  . $optionsHTML;
+		if( ! $isExistSelectAll )
+	    {
+				$allSelected = ( $isSelect ) ? "" : "selected='selected'" ;
+				$optionsHTML = "<option value='SelectAll' $allSelected >SelectAll</option>"  . $optionsHTML;
+		}
 		
 		return $optionsHTML;
 	}
