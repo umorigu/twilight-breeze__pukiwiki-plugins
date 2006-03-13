@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.10 2006/03/12 10:21:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.11 2006/03/14 08:04:32 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -1715,7 +1715,7 @@ class Tracker_field_datefield extends Tracker_field
 		
 		return <<<EOD
 <input type="text" name="$s_name" size="$s_size" value="$s_value" />
-<input type="button" value="..." onclick="dspCalendar(this.form.$s_name, event, $s_format, 0 , $s_year, $s_month-1, $s_date, 0);" />
+<input type="button" value="..." onclick="_plugin_datefield_dspCalendar(this.form.$s_name, event, $s_format, 0 , $s_year, $s_month-1, $s_date, 0);" />
 EOD;
 	}
   
