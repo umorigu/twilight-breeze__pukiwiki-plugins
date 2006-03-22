@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.11 2006/03/14 08:04:32 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.12 2006/03/23 01:06:16 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -1077,7 +1077,6 @@ EOD;
 		$fp = fopen($cachefile,'r')
 		  or die('cannot open '.$cachefile);
 
-		set_file_buffer($fp, 0);
 		flock($fp,LOCK_EX);
 		rewind($fp);
 
@@ -1146,14 +1145,12 @@ EOD;
 		ksort($this->rows);
 		$filename = $this->get_listcache_filename();
 		
-		$fp = fopen($filename, 'w')
+		$fp = fopen($filename, file_exists($filename) ? 'r+' : 'w')
 			or die('cannot open '.$filename);
 
-		set_file_buffer($fp, 0);
 		if(! flock($fp, LOCK_EX) )
-		{
 			return FALSE;  
-		}
+		rewind($fp);
 
 		$column_names = array();
                 foreach (plugin_tracker_plus_get_source($this->config->page.'/'.$this->list) as $line)
@@ -1185,8 +1182,10 @@ EOD;
 			{
 	 			$arr[$key] = addslashes($row[$key]);
 			}
-		fputs($fp, "\"" . implode('","', $arr) . "\"\n");
+			fputs($fp, "\"" . implode('","', $arr) . "\"\n");
 		}
+
+		fflush($fp);
 		flock($fp, LOCK_UN);
 		fclose($fp);
 	}
@@ -1219,6 +1218,13 @@ EOD;
 			return '';
 		}
 
+		$fp = fopen($cachefile,'r')
+		  or die('cannot open '.$cachefile);
+
+		flock($fp,LOCK_EX);
+		rewind($fp);
+
+		$htmls = '';
 		if( function_exists('file_get_contents' ) ) 
 		{
 			// file_get_contents is for PHP4 > 4.3.0, PHP5 function  
@@ -1226,17 +1232,10 @@ EOD;
 		}
 		else 
 		{
-			$fp = fopen($cachefile,'r')
-			  or die('cannot open '.$cachefile);
-			$htmls = "";
-			do
+			while( !feof($fp) )
 			{
-				$data = fread($fp, 8192);
-				if (strlen($data) == 0) {
-					break;
-				}
-				$htmls .= $data;
-			} while(true);
+				$html .= fread($fp, 8192);
+			}
 		}
 		$this->cache['state']['cnvrt'] = TRUE;
 
@@ -1244,6 +1243,9 @@ EOD;
 		{
 			$htmls .= $this->get_verbose_cachestatus();
 		}
+
+		flock($fp,LOCK_UN);
+		fclose($fp);
 
 		return $htmls;
 	}
@@ -1258,12 +1260,15 @@ EOD;
 		// toString() の結果をキャッシュとして書き出す
 		$cachefile = $this->get_cnvtcache_filename(); 
 
-		$fp = fopen($cachefile, 'w')
+		$fp = fopen($cachefile, file_exists($cachefile) ? 'r+' : 'w')
 			or die('cannot open '.$cachefile);
 
-		set_file_buffer($fp, 0);
 		flock($fp, LOCK_EX);
+		rewind($fp);
+
 		fwrite($fp, $htmls);
+
+		fflush($fp);
 		flock($fp,LOCK_UN);
 		fclose($fp);
 	}
