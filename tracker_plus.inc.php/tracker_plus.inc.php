@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.12 2006/03/23 01:06:16 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.12 2006/03/23 03:39:16 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -1075,9 +1075,14 @@ EOD;
 
 
 		$fp = fopen($cachefile,'r')
-		  or die('cannot open '.$cachefile);
+		  or die_message('cannot open '.$cachefile);
 
-		flock($fp,LOCK_EX);
+		if( ! flock($fp, LOCK_EX, TRUE) )
+		{
+			fclose($fp);
+			die_message("flock() failed.");
+		}
+
 		rewind($fp);
 
 		// This will get us the main column names.
@@ -1115,7 +1120,7 @@ EOD;
 			}
 		}
 
-		flock($fp,LOCK_UN);
+		flock($fp, LOCK_UN);
 		fclose($fp);
 
 		$this->cache['state']['stored_total'] = $stored_total;
@@ -1126,12 +1131,10 @@ EOD;
 	{
 		$cachefiles_pattern = '^' . $this->get_cache_filename() . '(.*).tracker$';
 
-		if( $this->cache['level'] == $this->cache_level['NO'] )
-		{
-			if(! $this->delete_caches($cachefiles_pattern) )
-			  die_message( CACHE_DIR . ' is not found or not readable.');
-			return;
-		}
+		if( $this->cache['level'] == $this->cache_level['NO'] 
+			and (! $this->delete_caches($cachefiles_pattern) ) )
+		  die_message( CACHE_DIR . ' is not found or not readable.');
+
 		if( $this->cache['state']['hits'] == $this->cache['state']['total'] 
 		   and $this->cache['state']['hits'] == $this->cache['state']['stored_total'] )
 		{  
@@ -1145,12 +1148,20 @@ EOD;
 		ksort($this->rows);
 		$filename = $this->get_listcache_filename();
 		
+		// If $filename exist, fopen() with 'w' mode destories file contents before acquiring flock() 
+		// because that open truncate filesize to 0.
 		$fp = fopen($filename, file_exists($filename) ? 'r+' : 'w')
-			or die('cannot open '.$filename);
+			or die_message('cannot open '.$filename);
 
-		if(! flock($fp, LOCK_EX) )
-			return FALSE;  
+		if( ! flock($fp, LOCK_EX, TRUE) )
+		{
+			fclose($fp);
+			die_message("flock() failed.");
+		}
+
+		// for opening with 'r+' mode.
 		rewind($fp);
+		ftruncate($fp, 0);
 
 		$column_names = array();
                 foreach (plugin_tracker_plus_get_source($this->config->page.'/'.$this->list) as $line)
@@ -1219,9 +1230,14 @@ EOD;
 		}
 
 		$fp = fopen($cachefile,'r')
-		  or die('cannot open '.$cachefile);
+		  or die_message('cannot open '.$cachefile);
 
-		flock($fp,LOCK_EX);
+		if( ! flock($fp, LOCK_EX, TRUE) )
+		{
+			fclose($fp);
+			die_message("flock() failed.");
+		}
+
 		rewind($fp);
 
 		$htmls = '';
@@ -1244,7 +1260,7 @@ EOD;
 			$htmls .= $this->get_verbose_cachestatus();
 		}
 
-		flock($fp,LOCK_UN);
+		flock($fp, LOCK_UN);
 		fclose($fp);
 
 		return $htmls;
@@ -1260,16 +1276,25 @@ EOD;
 		// toString() の結果をキャッシュとして書き出す
 		$cachefile = $this->get_cnvtcache_filename(); 
 
+		// If $filename exist, fopen() with 'w' mode destories file contents before acquiring flock() 
+		// because that open truncate filesize to 0.
 		$fp = fopen($cachefile, file_exists($cachefile) ? 'r+' : 'w')
-			or die('cannot open '.$cachefile);
+			or die_message('cannot open '.$cachefile);
 
-		flock($fp, LOCK_EX);
+		if( ! flock($fp, LOCK_EX, TRUE) )
+		{
+			fclose($fp);
+			die_message("flock() failed.");
+		}
+
+		// for opening with 'r+' mode.
 		rewind($fp);
+		ftruncate($fp, 0);
 
 		fwrite($fp, $htmls);
 
 		fflush($fp);
-		flock($fp,LOCK_UN);
+		flock($fp, LOCK_UN);
 		fclose($fp);
 	}
 
