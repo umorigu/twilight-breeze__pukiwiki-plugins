@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 0.9 2006/03/10 01:32:21 jjyun Exp $
+// $Id: listbox3.inc.php,v 1.0 2006/03/23 21:05:21 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 // -----------------------------------------------------------------
 // Copyright (C)
@@ -73,7 +73,7 @@ function plugin_listbox3_action()
 // ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
 function plugin_listbox3_headDeclaration()
 {
-	global $pkwk_dtd, $javascript;
+	global $pkwk_dtd, $javascript,$head_tags;
 
 	// Javasciptを用いること、<form>タグにname属性を用いることを通知する
 	if( PKWK_ALLOW_JAVASCRIPT && LISTBOX3_APPLY_MODECHANGE )
@@ -144,8 +144,8 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname)
 
 	$options_html = plugin_listbox3_getOptions($value, $template, $fieldname);
 	$imgPath  = IMAGE_DIR;
-	$imgEdit  = $_listbox3_cfg[imgEdit];
-	$imgRefer = $_listbox3_cfg[imgRefer];
+	$imgEdit  = $_listbox3_cfg['imgEdit'];
+	$imgRefer = $_listbox3_cfg['imgRefer'];
 	$body = <<<EOD
 	  <select name="select" style="vertical-align:middle" onchange="this.form.submit();">
 	  $options_html
