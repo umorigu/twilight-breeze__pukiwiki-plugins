@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: datefield.inc.php,v 1.4 2006/03/12 10:46:52 jjyun Exp $
+// $Id: datefield.inc.php,v 1.5 2006/03/23 21:10:25 jjyun Exp $
 //
 
 /* [概略の説明]
@@ -262,7 +262,7 @@ function plugin_datefield_getDate($dateStr, $formatStr)
 // ・XHTML1.0 Transitional Modeでの動作（<form>タグにname属性を用いる）
 function plugin_datefield_headDeclaration()
 {
-	global $pkwk_dtd, $javascript;
+	global $pkwk_dtd, $javascript, $head_tags;
 
 	// Javasciptを用いること、<form>タグにname属性を用いることを通知する
 	if( PKWK_ALLOW_JAVASCRIPT && DATEFIELD_APPLY_MODECHANGE )
@@ -370,8 +370,8 @@ function plugin_datefield_getBody($number, $value, $format_opt, $caldsp_opt = ''
 	$field_size = strlen($format_opt); 
   
 	$imagePath = IMAGE_DIR;
-	$imgEdit   = $_datefield_cfg[editImage];
-	$imgRefer  = $_datefield_cfg[referImage];
+	$imgEdit   = $_datefield_cfg['editImage'];
+	$imgRefer  = $_datefield_cfg['referImage'];
 
 	$body = <<<EOD
 	  <input type="text" name="infield" value="$value" size="{$field_size}" onchange="this.form.submit();" />
