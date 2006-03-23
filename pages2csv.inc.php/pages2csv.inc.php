@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 1.2 2005/12/07 01:30:40 jjyun Exp $
+// $Id: pages2csv.inc.php,v 1.3 2006/03/23 22:47:50 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -33,6 +33,7 @@ function plugin_pages2csv_init()
 
 function plugin_pages2csv_convert()
 {
+	global $script;
 	global $vars;
 	global $_pages2csv_messages, $_attach_messages;
   
@@ -98,6 +99,7 @@ function plugin_pages2csv_convert()
 	$s_filter = htmlspecialchars($filter);
 	$s_encode = htmlspecialchars($encode);
 	$s_extract = htmlspecialchars($extract);
+	$s_script = htmlspecialchars($script);
 	
 	$pass = '';
 	// attach.inc.php で アップロード/削除時にパスワードを要求する設定であった場合か
@@ -124,7 +126,7 @@ function plugin_pages2csv_convert()
 EOD;
 
 	return <<<EOD
-<form enctype="multipart/form-data" action="$script" method="post">
+<form enctype="multipart/form-data" action="$s_script" method="post">
  <div>
 $s_text
 <input type="submit" value="$s_title" />
