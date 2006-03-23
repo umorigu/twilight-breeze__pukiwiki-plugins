@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.12 2006/03/23 03:39:16 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.13 2006/03/23 23:06:16 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -522,7 +522,7 @@ class Tracker_plus_FilterConfig extends Config
 		{
 			if( $after_line == '') continue;
 
-    			if ($after_line{0} == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
+			if ($after_line{0} == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
 			{
 				// Table row
 				if (! is_a($after_obj, 'ConfigTable_Sequential') )
@@ -533,7 +533,10 @@ class Tracker_plus_FilterConfig extends Config
 
 		}
 
-		return $after_obj->values;
+		if( is_null($after_obj) )
+		  return NULL;
+		else
+		  return $after_obj->values;
 	}
 }
 
@@ -558,7 +561,7 @@ class Tracker_plus_list extends Tracker_list
 			   'verbs' => FALSE,
 			   );
 
-	function Tracker_plus_list($page,$refer,&$config,$list,$filter_name,$cache,$orefer)
+	function Tracker_plus_list($page,$refer,&$config,$list,$filter_name,$cache,$orefer = NULL)
 	{
 		$this->page = $page;
 		$this->config = &$config;
@@ -619,11 +622,11 @@ class Tracker_plus_list extends Tracker_list
 		// cache から cache作成時刻からデータを取り込む
 		// $this->add()での処理の前にあらかじめ cache から取り込んでおくことで、
 		// $this->add()の無限ループ防止ロジックを利用して、対象データを含むページの読み込みを行わせない。
-                $this->get_cache_rows();
+		$this->get_cache_rows();
 
-                $pattern = "$page/";
-                $pattern_len = strlen($pattern);
-                foreach (get_existpages() as $_page)
+		$pattern = "$page/";
+		$pattern_len = strlen($pattern);
+		foreach (get_existpages() as $_page)
 		{
 			if (strpos($_page,$pattern) === 0)
 			{
@@ -696,10 +699,10 @@ class Tracker_plus_list extends Tracker_list
 
 	function get_selector($filter,$order,$limit)
 	{
+		global $script;
 		global $_tracker_plus_list_msg;
 
 		if( ! $filter->filter_select ) return "";
-		if( $orefer == NULL) $orefer = $refer;
 
 		$optionsHTML = $filter->get_options_html();
 
@@ -716,6 +719,7 @@ class Tracker_plus_list extends Tracker_list
 		$_cache = ( $this->cache['level'] == $this->cache_level['LV2'] ) ? $this->cache_level['LV1'] : $this->cache['level'];
 		if( $this->cache['verbs'] ) $_cache = -1 * $_cache;
 		$s_cache = htmlspecialchars($_cache);
+		$s_script = htmlspecialchars($script);
 
 		$selector_html = <<< EOD
 <form action="$s_script" method="get" style="margin:0;">
@@ -1077,7 +1081,7 @@ EOD;
 		$fp = fopen($cachefile,'r')
 		  or die_message('cannot open '.$cachefile);
 
-		if( ! flock($fp, LOCK_EX, TRUE) )
+		if( ! flock($fp, LOCK_EX) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
@@ -1153,7 +1157,7 @@ EOD;
 		$fp = fopen($filename, file_exists($filename) ? 'r+' : 'w')
 			or die_message('cannot open '.$filename);
 
-		if( ! flock($fp, LOCK_EX, TRUE) )
+		if( ! flock($fp, LOCK_EX) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
@@ -1162,9 +1166,9 @@ EOD;
 		// for opening with 'r+' mode.
 		rewind($fp);
 		ftruncate($fp, 0);
-
+		
 		$column_names = array();
-                foreach (plugin_tracker_plus_get_source($this->config->page.'/'.$this->list) as $line)
+		foreach (plugin_tracker_plus_get_source($this->config->page.'/'.$this->list) as $line)
 		{
 			if (! preg_match('/^\|(.+)\|[hHfFcC]$/',$line))
 			{
@@ -1179,11 +1183,10 @@ EOD;
 				}
 			}
 		}
-                // add default parameter
-                $column_names = array_merge($column_names,
-					    array('_page','_refer','_real','_update','_match'));
-                $column_names = array_unique($column_names);
-
+		// add default parameter
+		$column_names = array_merge($column_names, array('_page','_refer','_real','_update','_match'));
+		$column_names = array_unique($column_names);
+		
 		fputs($fp, "\"" . implode('","', $column_names)."\"\n");
 
 		foreach ($this->rows as $row)
@@ -1191,6 +1194,9 @@ EOD;
 			$arr = array();
 			foreach ( $column_names as $key)
 			{
+				// it skip '_line' value because that's value is temporary.
+				if( $key == '_line' ) continue;
+
 	 			$arr[$key] = addslashes($row[$key]);
 			}
 			fputs($fp, "\"" . implode('","', $arr) . "\"\n");
@@ -1232,7 +1238,7 @@ EOD;
 		$fp = fopen($cachefile,'r')
 		  or die_message('cannot open '.$cachefile);
 
-		if( ! flock($fp, LOCK_EX, TRUE) )
+		if( ! flock($fp, LOCK_EX) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
@@ -1281,7 +1287,7 @@ EOD;
 		$fp = fopen($cachefile, file_exists($cachefile) ? 'r+' : 'w')
 			or die_message('cannot open '.$cachefile);
 
-		if( ! flock($fp, LOCK_EX, TRUE) )
+		if( ! flock($fp, LOCK_EX) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
@@ -1424,8 +1430,12 @@ class Tracker_plus_list_filter
 
 		$s_label = $filter_name;
 		$s_format = "";
+		
+		$style_options = $this->config->after_read($filter_name);
+		if( is_null($style_options) )
+		  return array($s_label, $s_format);
 
-		foreach( $this->config->after_read($filter_name) as $options)
+		foreach( $style_options as $options )
 		{
 			if($options[0] != $_tracker_plus_list_msg['filter_extTitle'] ) continue;
 
@@ -1819,16 +1829,14 @@ EOD;
 
 class Tracker_plus_field_string_utility {
   
-  	function get_argument_from_block_type_plugin_string($str,
-						      $extract_arg_num = 0,
-						      $plugin_name = '.*' ) {
-	  return Tracker_plus_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,'block');
+  	function get_argument_from_block_type_plugin_string($str, $extract_arg_num = 0, $plugin_name = '.*' )
+	{
+		return Tracker_plus_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,'block');
 	}
   
 	// plugin_type : block type = 0, inline type = 1.
 	// extract_arg_num : first argument number is 0.  
-	function get_argument_from_plugin_string($str, 
-						 $extract_arg_num, $plugin_name, $plugin_type = 'block')
+	function get_argument_from_plugin_string($str, $extract_arg_num, $plugin_name, $plugin_type = 'block')
 	{
 		$str_plugin = ($plugin_type == 'inline') ? '\&' : '\#' ;
 		$str_plugin .= $plugin_name;
@@ -1840,7 +1848,7 @@ class Tracker_plus_field_string_utility {
 		{
 			$paddata = preg_split("/$str_plugin\([^\)]*\)/", $str);
 			$str = $paddata[0];
-                        foreach($matches as $i => $match)
+			foreach($matches as $i => $match)
 			{
 				$args = array();
 
@@ -1858,12 +1866,12 @@ class Tracker_plus_field_string_utility {
 			// block-type,inline-type のプラグイン指定において、
 			// 最後の括弧の後にセミコロンがある場合とない場合が存在するため、
 			// セミコロンが直後にあった場合は、プラグイン指定の一部と捉えて除去を行う
-			if( preg_match("/^\;.*$/",$paddata[$i+1],$exrep) )
+			if( preg_match("/^\;.*$/",$paddata[$i+1],$exrep) &&	count($exrep) > 1)
 			{
 				$paddata[$i+1] = $exrep[1];
 			}
-                        $str .= $extract_arg . $paddata[$i+1];
-                }
+			$str .= $extract_arg . $paddata[$i+1];
+		}
 		return $str;
 	}
 }
