@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: tracker_summary_item.inc.php,v 0.6 2005/09/10 11:16:02 jjyun Exp $
+// $Id: tracker_summary_item.inc.php,v 0.7 2006/03/23 23:38:02 jjyun Exp $
 //
 // License   : GNU General Public License (GPL) 
 // 
@@ -26,7 +26,7 @@ function plugin_tracker_summary_item_convert()
 	$list = 'list';
 	$page = $refer = $vars['page'];
 	$filter = '';
-	$cache = TRACKER_LIST_CACHE_DEFAULT;
+	$cache = TRACKER_PLUS_LIST_CACHE_DEFAULT;
 
 	if (func_num_args())
 	{
@@ -150,25 +150,23 @@ function plugin_tracker_summary_item_getsum($page, $refer, $config_name, $list,
 		return array( $isSuccess, $errmsg, $title , $sum);
 	}
 
-	if($filter_name != NULL)
-	{
-	        $filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
-		if(!$filter_config->read())
-		{
-		        // filterの設定がなされていなければ, エラーログを返す
-		        $errmsg = "config file '".htmlspecialchars($config->page.'/filters')."' not found.";
-			return array( $isSuccess, $errmsg, $title , $sum);
-		}
-	        $list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
-	}
-	unset($filter_config);
-
 	// $list 変数が別の意味で使いまわされているので注意!! (jjyun's comment)
 	$list = &new Tracker_plus_list($page,$refer,$config,$list,$filter_name,$cache);
 
 	if($filter_name != NULL)
 	{
-		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+		$filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
+		if( ! $filter_config->read() )
+		{
+			// filterの設定がなされていなければ, エラーログを返す
+			$errmsg = "config file '".htmlspecialchars($config->page.'/filters')."' not found.";
+			return array( $isSuccess, $errmsg, $title , $sum);
+		}
+		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
+		//		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+		$list->rows = array_filter($list->rows, array($list_filter, 'judge') );
+
+		unset($filter_config);
 	}
 
 	$summary_calc = new Tracker_summary_item_calcuation($target_name, $input_format, $output_format);
@@ -217,9 +215,7 @@ class Tracker_summary_item_calcuation
 	function Tracker_summary_item_calcuation($target,$input_format,$output_format)
 	{
 	  
-		list($target_name,$target_type) =
-		  array_pad(explode(':',$target),1,'VALUE');
-
+		list($target_name,$target_type) = array_pad(explode(':',$target),2,'VALUE');
 
 		$this->target_name = $target_name;
 		
@@ -286,6 +282,8 @@ class Tracker_summary_item_calcuation
 
 class Tracker_summary_item_DATA_TYPE
 {
+	var $errMsg = '';
+
 	function Tracker_summary_item_DATA_TYPE(){}
 	function getValue($dataStr){} // in other words, this is parseStr(). 
 	function getStr($sumValue){} // in other words, this is parseValue()
@@ -317,7 +315,6 @@ class Tracker_summary_item_DATA_TYPE_TIME extends Tracker_summary_item_DATA_TYPE
 
 	var $inputArgsPtn;
 	var $outputArgsPtn;
-	var $errMsg = '';
   
 	function Tracker_summary_item_DATA_TYPE_TIME($input_format='H:M:S',
 						     $output_format='H:M:S')
