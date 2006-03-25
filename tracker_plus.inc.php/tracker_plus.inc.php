@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.13 2006/03/23 23:06:16 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.14 2006/03/26 00:56:16 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -1081,7 +1081,7 @@ EOD;
 		$fp = fopen($cachefile,'r')
 		  or die_message('cannot open '.$cachefile);
 
-		if( ! flock($fp, LOCK_EX) )
+		if( ! flock($fp, LOCK_SH) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
@@ -1238,7 +1238,7 @@ EOD;
 		$fp = fopen($cachefile,'r')
 		  or die_message('cannot open '.$cachefile);
 
-		if( ! flock($fp, LOCK_EX) )
+		if( ! flock($fp, LOCK_SH) )
 		{
 			fclose($fp);
 			die_message("flock() failed.");
