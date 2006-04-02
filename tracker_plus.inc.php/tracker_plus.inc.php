@@ -1200,6 +1200,15 @@ EOD;
         // add default parameter
         $column_names = array_merge($column_names, array('_page','_refer','_real','_update','_match'));
         $column_names = array_unique($column_names);
+
+        // it skip '_line' value because that's value is temporary.
+        $index = array_search( '_line', $column_names );
+        if( $index !== FALSE )
+        {
+            $endValue = end($column_names);
+            $column_names[ $index ] = $endValue;
+            unset($column_names[ count($column_names) ]);
+        }
         
         fputs($fp, "\"" . implode('","', $column_names)."\"\n");
 
@@ -1208,9 +1217,6 @@ EOD;
             $arr = array();
             foreach( $column_names as $key )
             {
-                // it skip '_line' value because that's value is temporary.
-                if( $key == '_line' ) continue;
-
                  $arr[$key] = addslashes($row[$key]);
             }
             fputs($fp, "\"" . implode('","', $arr) . "\"\n");
