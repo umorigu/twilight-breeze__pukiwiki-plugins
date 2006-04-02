@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: linkvote.inc.php,v 0.4 2004/12/10 02:38:42 jjyun Exp $
+// $Id: linkvote.inc.php,v 0.5 2006/04/02 22:32:42 jjyun Exp $
 /**
  *  PukiWiki - link with used counter plugin
  * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
@@ -15,6 +15,9 @@
  * This script is create by jjyun, based on vote2.inc.php, v 0.12.
  * 
  */
+
+// リンクを別窓で開く.
+define('LINKVOTE_OPEN_LINK_WITH_ANOTHER_WINDOW', false);
 
 function plugin_linkvote_init()
 {
@@ -82,6 +85,7 @@ function plugin_linkvote_inline()
 {
 	global $script,$vars,$digest, $_linkvote_messages, $_vote_plugin_votes;
 	global $_vote_plugin_choice, $_vote_plugin_votes;
+    global $pkwk_dtd;
 	static $numbers = array();
 	static $notitle = FALSE;
 	$str_notimestamp = $_linkvote_messages['arg_notimestamp'];
@@ -102,6 +106,15 @@ function plugin_linkvote_inline()
 	$arg = '';
 	$cnt = 0;
 	$nonumber = $nolabel = FALSE;
+
+	if( LINKVOTE_OPEN_LINK_WITH_ANOTHER_WINDOW )
+	{
+		// XHTML 1.0 Transitional
+		if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
+		{
+			$pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
+		}
+    }
 
 	foreach ( $args as $opt ){
 		$opt = trim($opt);
@@ -142,6 +155,9 @@ function plugin_linkvote_inline()
 	$f_vote_plugin_votes = rawurlencode($_vote_plugin_votes);
 	$f_disturl = rawurlencode($str_disturl);
 	$f_cnt = '';
+    $target = LINKVOTE_OPEN_LINK_WITH_ANOTHER_WINDOW ? "target=\"_blank\"" : "";
+
+
 	if ( $nonumber == FALSE ) {
 		$title = $notitle ? '' : "title=\"$o_vote_inno\"";
 		$f_cnt = "<span $title>&nbsp;" . $cnt . "&nbsp;</span>";
@@ -150,7 +166,7 @@ function plugin_linkvote_inline()
 		$title = $notitle ? '' : "title=\"$f_vote_inno\"";
 		if( $str_bunner == '' ) {
 		  return <<<EOD
-<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title>$link</a>$f_cnt
+<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title $target>$link</a>$f_cnt
 EOD;
 		}
 		else {
@@ -162,7 +178,7 @@ EOD;
 		  }
 		  else {
 		    return <<<EOD
-<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title>{$ret_ref['_body']}</a>$f_cnt
+<a href="$script?plugin=linkvote&amp;refer=$f_page&amp;vote_inno=$vote_inno&amp;vote_$e_arg=$f_vote_plugin_votes&amp;digest=$f_digest&amp;dist_url=$f_disturl" $title $target>{$ret_ref['_body']}</a>$f_cnt
 EOD;
 		  }
 		}
@@ -425,6 +441,8 @@ function plugin_linkvote_action_block($vote_no)
 }
 // -- linkvote.inc.php --
 // Update Logs - Modified by jjyun. (2004/02/22 - 2004/12/10)
+//  v0.5 2006/04/02 modified by jjyun.
+//    リンク先を別窓で表示させるフラグ(LINKVOTE_OPEN_LINK_WITH_ANOTHER_WINDOW)を追加.
 //  v0.4 2004/12/10 modified by jjyun.
 //    内部コードの修正(変更箇所 plugin_linkvote_inline(), plugin_linkvote_address() )
 //  v0.3 2004/09/05 modified by jjyun.
