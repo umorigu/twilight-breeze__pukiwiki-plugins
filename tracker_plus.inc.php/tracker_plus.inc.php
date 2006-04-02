@@ -822,7 +822,7 @@ EOD;
             }
         }
         
-        $showMax = ( ($pagingNo + 2) * $limit > $total) ? $total : ($pagingNo + 1) * $limit;
+        $showMax = ( ($pagingNo + 1) * $limit > $total) ? $total : ($pagingNo + 1) * $limit;
         $pagingStatus = str_replace( array('$1','$2','$3'),
                         array( $total, $limit * $pagingNo + 1 , $showMax),
                          $_tracker_plus_list_msg['paging']);
