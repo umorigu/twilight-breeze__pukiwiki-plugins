@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.15a 2006/03/26 00:56:16 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 2.15 2006/04/03 22:04:36 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -99,7 +99,7 @@ function plugin_tracker_plus_init_en()
      $msg = array(
      //        '_tracker_plus_msg' => array(),
         '_tracker_plus_list_msg' => array(
-             'nodata'             => 'There is no item displayed in List.',
+            'nodata'             => 'There is no item displayed in List.',
             'paging'             => 'This displays it from the $2 th to the $3 th among $1.',
             'paging_linkMark'    => '■',
             'paging_lessMark'    => '《',
