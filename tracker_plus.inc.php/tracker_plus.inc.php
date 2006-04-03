@@ -1644,7 +1644,7 @@ class Tracker_plus_list_filterCondition
                 $ret = preg_match("/$this->condValues/",$target_value);
                 break;
             case 'NOT EXIST':
-                $ret != preg_match("/$this->condValues/",$target_value);
+                $ret = ! preg_match("/$this->condValues/",$target_value);
                 break;
             default:
                 die_message( $_tracker_plus_list_msg['filter_definition_error'] . ": operator is not valid." );
