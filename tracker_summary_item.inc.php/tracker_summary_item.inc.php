@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: tracker_summary_item.inc.php,v 0.7 2006/03/23 23:38:02 jjyun Exp $
+// $Id: tracker_summary_item.inc.php,v 0.8 2006/04/04 00:41:52 jjyun Exp $
 //
 // License   : GNU General Public License (GPL) 
 // 
@@ -14,6 +14,11 @@ define ('TRACKER_SUMMARY_ITEM_TIME_TYPE_PAL'  ,25);
 define ('TRACKER_SUMMARY_ITEM_TIME_TYPE_NTSC' ,30);
 
 require_once( PLUGIN_DIR . 'tracker_plus.inc.php');
+
+function plugin_tracker_summary_item_init()
+{
+    plugin_tracker_plus_init();
+}
 
 function plugin_tracker_summary_item_convert()
 {
@@ -155,7 +160,7 @@ function plugin_tracker_summary_item_getsum($page, $refer, $config_name, $list,
 
 	if($filter_name != NULL)
 	{
-		$filter_config = new Config('plugin/tracker/'.$config->config_name.'/filters');
+		$filter_config = new Tracker_plus_FilterConfig('plugin/tracker/'.$config->config_name.'/filters');
 		if( ! $filter_config->read() )
 		{
 			// filterの設定がなされていなければ, エラーログを返す
@@ -163,9 +168,11 @@ function plugin_tracker_summary_item_getsum($page, $refer, $config_name, $list,
 			return array( $isSuccess, $errmsg, $title , $sum);
 		}
 		$list_filter = &new Tracker_plus_list_filter($filter_config, $filter_name);
-		//		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
-		$list->rows = array_filter($list->rows, array($list_filter, 'judge') );
 
+		//		$list->rows = array_filter($list->rows, array($list_filter, 'filters') );
+		// $list->rows = array_filter($list->rows, array($list_filter, 'judge') );
+
+        $list_filter->list_filter($list);
 		unset($filter_config);
 	}
 
