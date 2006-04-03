@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 2.15 2006/04/03 22:04:36 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 3.0 2006/04/03 23:39:56 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -85,10 +85,13 @@ function plugin_tracker_plus_init_ja()
             'paging_moreMark'    => '》',
             'paging_lessMarkStr' => '[前の $1 件]',
             'paging_moreMarkStr' => '[次の $1 件]',
-            'filter_and'         => 'かつ',  // TRACKER_PLUS FILTER CONSTANT DEFINISION 
-            'filter_exclude'     => '除外',  // TRACKER_PLUS FILTER CONSTANT DEFINISION 
             'filter_label'          => '絞り込み条件一覧',
             'filter_extTitle'    => '拡張見出し',
+            'filter_title_logicalOperator' => '連結条件',
+            'filter_title_targetField'     => '対象項目',
+            'filter_title_operator'        => '条件',
+            'filter_title_conditionValues' => '条件値',
+            'filter_definition_error'      => 'フィルタ条件が不正です'
         )
     ); 
     return $msg;
@@ -106,10 +109,13 @@ function plugin_tracker_plus_init_en()
             'paging_moreMark'    => '》',
             'paging_lessMarkStr' => '[Before $1 ]',
             'paging_moreMarkStr' => '[Next $1 ]',
-            'filter_and'         => 'AND',     // TRACKER_PLUS FILTER CONSTANT DEFINISION 
-            'filter_exclude'     => 'EXCLUDE', // TRACKER_PLUS FILTER CONSTANT DEFINISION 
             'filter_label'       => 'FilterList of TrackerList',
             'filter_extTitle'    => 'EXTENTED_TITLE',
+            'filter_title_logicalOperator' => 'LogicalOperator',
+            'filter_title_targetField'     => 'Target',
+            'filter_title_operator'        => 'Operator',
+            'filter_title_conditionValues' => 'ConditionValues',
+            'filter_definition_error'      => 'filter definition is irregal.'
         )
      );
     return $msg;
@@ -157,7 +163,7 @@ function plugin_tracker_plus_convert()
     // (Attension) Config Class don't have config_name member. This make extra definision. (jjyun)
     $config->config_name = $config_name;
 
-    $fields = plugin_tracker_plus_get_fields($base,$refer,$config);
+    $fields = plugin_tracker_plus_get_fields( $base, $refer, $config );
 
     $form = $config->page.'/'.$form;
     
@@ -346,15 +352,15 @@ function plugin_tracker_plus_get_fields($base,$refer,&$config)
     $fields = array();
     // 予約語
     foreach( array(
-                 '_date'=>'text',    // 投稿日時
-                 '_update'=>'date',  // 最終更新
-                 '_past'=>'past',    // 経過(passage)
-                 '_page'=>'page',    // ページ名
-                 '_name'=>'text',    // 指定されたページ名
-                 '_real'=>'real',    // 実際のページ名
-         '_refer'=>'page',   // 参照元(フォームのあるページ)
-                 '_base'=>'page',    // 基準ページ
-                 '_submit'=>'submit_plus', // 追加ボタン
+                 '_date'   => 'text',        // 投稿日時
+                 '_update' => 'date',        // 最終更新
+                 '_past'   => 'past',        // 経過(passage)
+                 '_page'   => 'page',        // ページ名
+                 '_name'   => 'text',        // 指定されたページ名
+                 '_real'   => 'real',        // 実際のページ名
+                 '_refer'  => 'page',        // 参照元(フォームのあるページ)
+                 '_base'   => 'page',        // 基準ページ
+                 '_submit' => 'submit_plus', // 追加ボタン
                  ) as $field=>$class)
     {
         $class = 'Tracker_field_'.$class;
@@ -395,22 +401,22 @@ function plugin_tracker_plus_list_convert()
     if( func_num_args() )
     {
         $args = func_get_args();
-        switch (count($args))
+        switch ( count($args) )
         {
-                case 6:
-                    $cache = is_numeric($args[5]) ? $args[5] : $cache;
-                case 5:
-                    $filter_name = $args[4];
-            case 4:
-                $limit = is_numeric($args[3]) ? $args[3] : $limit;
-            case 3:
-                $order = $args[2];
-            case 2:
-                $args[1] = get_fullname($args[1],$page);
-                $page = is_pagename($args[1]) ? $args[1] : $page;
-            case 1:
-                $config = ($args[0] != '') ? $args[0] : $config;
-                list($config,$list) = array_pad(explode('/',$config,2),2,$list);
+        case 6:
+            $cache = is_numeric($args[5]) ? $args[5] : $cache;
+        case 5:
+            $filter_name = $args[4];
+        case 4:
+            $limit = is_numeric($args[3]) ? $args[3] : $limit;
+        case 3:
+            $order = $args[2];
+        case 2:
+            $args[1] = get_fullname($args[1],$page);
+            $page = is_pagename($args[1]) ? $args[1] : $page;
+        case 1:
+            $config = ( $args[0] != '' ) ? $args[0] : $config;
+            list($config,$list) = array_pad( explode('/',$config,2), 2, $list );
         }
     }
 
@@ -497,7 +503,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
         $list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
         
         $filter_selector = $list->get_selector($list_filter, $order, $limit);
-        $list_filter->filter($list);
+        $list_filter->list_filter($list);
         unset($list_filter);
     }
 
@@ -519,16 +525,39 @@ class Tracker_plus_FilterConfig extends Config
         return array_keys($this->objs);
     }
 
+
+    function before_read($title)
+    {
+        $before_obj = NULL;
+        $obj = & $this->get_object($title);
+  
+        foreach( $obj->before as $before_line )
+        {
+            if ( strlen($before_line) > 0 && $before_line{0} == '|' && preg_match('/^\|(.+)\|([hH]?)\s*$/', $before_line, $matches) )
+            {
+                // Table row
+                if (! is_a($before_obj, 'ConfigTable_Sequential') )
+                    $before_obj = & new ConfigTable_Sequential('', $before_obj);
+                // Trim() each table cell
+                $before_obj->add_value(array_map('trim', explode('|', $matches[1])));
+            }
+        }
+        if( is_null($before_obj) )
+            return NULL;
+        else
+            return $before_obj->values[0];
+    }
+    
     function after_read($title)
     {
         $after_obj = NULL;
         $obj = & $this->get_object($title);
-
+        
         foreach( $obj->after as $after_line )
         {
             if( $after_line == '' )
                 continue;
-
+            
             if( $after_line{0} == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
             {
                 // Table row
@@ -541,9 +570,9 @@ class Tracker_plus_FilterConfig extends Config
         }
 
         if( is_null($after_obj) )
-          return NULL;
+            return NULL;
         else
-          return $after_obj->values;
+            return $after_obj->values;
     }
 }
 
@@ -647,8 +676,8 @@ class Tracker_plus_list extends Tracker_list
             }
         }
         $this->cache['state']['total'] = count($this->rows);
-                $this->put_cache_rows();
-        }
+        $this->put_cache_rows();
+    }
 
     // over-wride function.
     function replace_title($arr)
@@ -1091,7 +1120,6 @@ EOD;
             return ;
         }
 
-
         $fp = fopen($cachefile,'r')
           or die_message('cannot open '.$cachefile);
 
@@ -1105,13 +1133,11 @@ EOD;
 
         // This will get us the main column names.
         // (jjyun) I tryed csv_explode() function , but this behavior is not match as I wanted.
-
         $column_names = fgetcsv($fp, filesize($cachefile));
 
         $stored_total = 0;
         while( $arr = fgetcsv($fp, filesize($cachefile)) )
         {
-          
             $row = array();
             $stored_total +=1;
             // This code include cache contents in $rows.
@@ -1129,7 +1155,6 @@ EOD;
             // This code check cache effective.
             //  by means of comparing filetime between real page and cache contents.
             // If cache is effective, this code include cache contents in rows.
-
             if( isset($row['_real'])
                  and isset($row['_update']) 
                  and (get_filetime($this->page.'/'.$row['_real']) == $row['_update']) )
@@ -1203,7 +1228,7 @@ EOD;
 
         // it skip '_line' value because that's value is temporary.
         $index = array_search( '_line', $column_names );
-        if( $index !== FALSE )
+        if( $index !== FALSE ) 
         {
             $endValue = end($column_names);
             $column_names[ $index ] = $endValue;
@@ -1355,24 +1380,40 @@ function plugin_tracker_plus_get_source($page)
 class Tracker_plus_list_filter
 {
     var $name;
+    var $filter_config;
     var $filter_select;
     var $conditions = array();
-    var $config;
+
+    // setting in filter(), and use judge().
+    var $field_config = Null;
   
     function Tracker_plus_list_filter($filter_config, $name = NULL, $filter_select = FALSE)
     {
-        $this->config = $filter_config;  
         $this->name = $name;
+        $this->filter_config = $filter_config;  
         $this->filter_select = $filter_select;
+
+        $keys = $filter_config->before_read($name);
         foreach( $filter_config->get($name) as $filter )
         {
+            foreach($keys as $index => $key )
+            {
+                $filterKeyValues[ $key ] = $filter[ $index ];
+            }
+            
             array_push( $this->conditions,
-                    new Tracker_plus_list_filterCondition($filter, $name) );
+                        new Tracker_plus_list_filterCondition($filterKeyValues, $name) );
         }
     }
 
-    function filter(& $list)
+    function list_filter(& $list)
     {
+        $field_config = array();
+        foreach( $list->config->objs['fields']->values as $field )
+        {
+            $this->field_config[ $field[0] ] = $field;
+        }
+
         if( $this->name != NULL )
         {
             $list->rows = array_filter($list->rows, array($this, "judge" ));
@@ -1385,13 +1426,13 @@ class Tracker_plus_list_filter
         $condition_flag = true;
         foreach( $this->conditions as $condition )
         {
-            if( $condition->is_cnctlogic_AND or $counter == 0 )
+            if( $condition->isConjunction or $counter == 0 )
             {
-                $condition_flag = ($condition->filter($var) and $condition_flag );
+                $condition_flag = ($condition->filter($var, $this->field_config) and $condition_flag );
             }
             else
             {  
-                $condition_flag = ($condition->filter($var)  or $condition_flag );
+                $condition_flag = ($condition->filter($var, $this->field_config)  or $condition_flag );
             }
             $counter++ ;
         }
@@ -1402,7 +1443,7 @@ class Tracker_plus_list_filter
     {
         $optionsHTML = '';
         $isSelect = false;
-        $keys = $this->config->get_keys();
+        $keys = $this->filter_config->get_keys();
 
         // for difference between servers.
         // one's $keys has "SelectAll", the other's doesn't have "SelectAll".
@@ -1451,7 +1492,7 @@ class Tracker_plus_list_filter
         $s_label = $filter_name;
         $s_format = "";
         
-        $style_options = $this->config->after_read($filter_name);
+        $style_options = $this->filter_config->after_read($filter_name);
         if( is_null($style_options) )
           return array($s_label, $s_format);
 
@@ -1491,26 +1532,126 @@ class Tracker_plus_list_filterCondition
 {
     var $name;
     var $target;
-    var $matches;
-    var $is_exclued;
-    var $is_cnctlogic_AND;
+    var $condValues;
+    var $condExpress;
+    var $isConjunction;
   
-    function Tracker_plus_list_filterCondition($field,$name)
+    function Tracker_plus_list_filterCondition( $keyValues, $name )
     {
-          global $_tracker_plus_list_msg;
+        global $_tracker_plus_list_msg;
+
+        $filter_titles = array( $_tracker_plus_list_msg['filter_title_logicalOperator'],
+                                $_tracker_plus_list_msg['filter_title_targetField'],
+                                $_tracker_plus_list_msg['filter_title_operator'],
+                                $_tracker_plus_list_msg['filter_title_conditionValues'] );
 
         $this->name = $name;
-        $this->is_cnctlogic_AND = ($field[0] == $_tracker_plus_list_msg['filter_and'] ) ? true : false ;
-        $this->target = $field[1];
-        $this->matches = preg_quote($field[2],'/');
-        $this->matches = implode(explode(',',$this->matches) ,'|');
-        $this->is_exclued = ($field[3] == $_tracker_plus_list_msg['filter_exclude'] ) ? true : false ;
+
+        foreach( $filter_titles as $key )
+        {  
+            if( ! isset( $keyValues[$key] ) )
+            {
+                die_message( $_tracker_plus_list_msg['filter_definition_error'] . ": missing \"$key\" in definition.");
+            }
+
+            switch( $key )
+            {
+            case $_tracker_plus_list_msg['filter_title_logicalOperator'] :
+                $this->isConjunction = ($keyValues[ $key ] == 'AND' ) ? true : false ;
+                break;
+            case $_tracker_plus_list_msg['filter_title_targetField'] :
+                $this->target = $keyValues[ $key ];
+                break;
+            case $_tracker_plus_list_msg['filter_title_operator'] :
+                $this->condExpress = $keyValues[ $key ];
+                break;
+            case $_tracker_plus_list_msg['filter_title_conditionValues'] :
+                $this->condValues = preg_quote($keyValues[ $key ],'/');
+                $this->condValues = implode(explode(',',$this->condValues) ,'|');
+                break;
+            default :
+                // internal error.
+            }
+        }        
     }
   
-    function filter($var)
+    function filter($var, &$field_config)
     {
-        $flag = preg_match("/$this->matches/",$var[$this->target]);
-        return ($this->is_exclued) ? (! $flag): $flag;
+        global $_tracker_plus_list_msg;
+
+//           $flag = preg_match("/$this->condValues/",$var[$this->target]);
+//           return ($this->isConjunction) ? $flag : ! $flag;
+
+        $ret = false;
+        $target_value = $var[$this->target];
+            
+        if( $field_config[$this->target][2] == 'datefield' &&
+            ( $this->condExpress == '?='  ||
+              $this->condExpress == '?<'  || $this->condExpress == '?<=' || 
+              $this->condExpress == '?>'  || $this->condExpress == '?>=' ) )
+        {
+            require_once(PLUGIN_DIR . 'datefield.inc.php');
+
+            $str_datefield_options = $field_config[$this->target][3];
+            $args = explode("," , $str_datefield_options);
+            $formatStr = ( count($args) < 2 || $args[1] == '' ) ?  'YYYY-MM-DD' : $args[1];
+
+            $condDate = '00000000';
+            if( $this->condValues == 'TODAY' )
+            {
+                $condDate = date( "Ymd",time() );
+            }
+            else
+            {
+                $condTmpDate = plugin_datefield_getDate( $this->condValues, $formatStr);
+                if( $condTmpDate['year'] == -1 || $condTmpDate['month'] == -1 || $condTmpDate['day'] == -1)
+                    die_message( $_tracker_plus_list_msg['filter_definition_error'] . ": datefield condition value is irregal." );
+
+                $condDate = sprintf("%02d%02d%02d", $condTmpDate['year'], $condTmpDate['month'], $condTmpDate['day']);
+            }
+
+            $targetTmpDate = plugin_datefield_getDate( $target_value, $formatStr );
+            if( $targetTmpDate['year'] == -1 || $targetTmpDate['month'] == -1 || $targetTmpDate['day'] == -1)
+                return false;
+            $targetDate = sprintf("%02d%02d%02d", $targetTmpDate['year'], $targetTmpDate['month'], $targetTmpDate['day']);
+
+            switch ( $this->condExpress )
+            {
+            case '?=':
+                $ret = $targetDate == $condDate;
+                break;
+            case '?<' :
+                $ret = $targetDate < $condDate;
+                break;
+            case '?<=':
+                $ret = $targetDate <= $condDate;
+                break;
+            case '?>':
+                $ret = $targetDate > $condDate;
+                break;
+            case '?>=':
+                $ret = $targetDate >= $condDate;
+                break;
+            default:
+                die_message( $_tracker_plus_list_msg['filter_definition_error'] . ": operator is not valid in datefield field.");
+            }
+        }
+        else
+        {
+            switch ( $this->condExpress )
+            {
+            case  'EXIST':
+                $ret = preg_match("/$this->condValues/",$target_value);
+                break;
+            case 'NOT EXIST':
+                $ret != preg_match("/$this->condValues/",$target_value);
+                break;
+            default:
+                die_message( $_tracker_plus_list_msg['filter_definition_error'] . ": operator is not valid." );
+            }
+        }
+
+        return $ret;
     }
 
     function toString()
@@ -1518,9 +1659,10 @@ class Tracker_plus_list_filterCondition
         $str =
           "name   : $this->name |"
           . "target : $this->target |"
-          . "matches: $this->matches |"
-          . "exc-lgc: $this->is_exclued | "
-          . "cnctlgc: $this->is_cnctlogic_AND |";
+          . "condValues: $this->condValues |"
+          . "exc-lgc: $this->condExpress | "
+          . "cnctlgc: $this->isConjunction |";
+
         return $str;
     }
 }
@@ -1759,7 +1901,7 @@ class Tracker_field_datefield extends Tracker_field
 {
     function get_tag()
     {
-            $s_name = htmlspecialchars($this->name);
+        $s_name = htmlspecialchars($this->name);
         $s_size = (array_key_exists(0,$this->values)) ? htmlspecialchars($this->values[0]) : '10';
         $s_format = (array_key_exists(1,$this->values)) ? htmlspecialchars($this->values[1]) : 'YYYY-MM-DD';
         $s_value = htmlspecialchars($this->default_value);
@@ -1769,7 +1911,7 @@ class Tracker_field_datefield extends Tracker_field
         $s_date  = date("d",time()); 
         
         // デフォルト値を現在の日付にする
-        if( $s_value=="NOW" )
+        if( $s_value=="TODAY" )
         {
           $s_value = $this->get_datestr_with_format($s_format, $s_year, $s_month, $s_date);
         }
