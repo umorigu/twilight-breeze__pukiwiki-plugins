@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: listbox3.inc.php,v 1.0 2006/03/23 21:05:21 jjyun Exp $
+// $Id: listbox3.inc.php,v 1.1 2006/04/30 09:16:10 jjyun Exp $
 //   This script is based on listbox2.inc.php by KaWaZ
 // -----------------------------------------------------------------
 // Copyright (C)
@@ -153,6 +153,9 @@ function plugin_listbox3_getBody($number, $value, $template, $fieldname)
 	  <input type="hidden" name="number" value="$number" />
 	  <input type="hidden" name="plugin" value="listbox3" />
 	  <input type="hidden" name="refer"  value="$page_enc" />
+    <noscript>
+	  <input type="submit" size="9" value="set" />
+    </noscript>
 EOD;
 
 	if( PKWK_ALLOW_JAVASCRIPT && LISTBOX3_APPLY_MODECHANGE )
