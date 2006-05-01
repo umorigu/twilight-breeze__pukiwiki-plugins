@@ -1,5 +1,5 @@
 <?php
-// $Id: memox.inc.php,v 0.6 2004/12/29 18:37:11 jjyun Exp $
+// $Id: memox.inc.php,v 0.7 2006/05/02 00:01:11 jjyun Exp $
 /**
  * PukiWiki メモ拡張プラグイン(memo eXtented plugin)
  * (C) 2004, jjyun. http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php
@@ -56,6 +56,7 @@ function plugin_memox_action()
 {
 	global $script, $vars, $cols, $rows;
 	global $_title_collided, $_msg_collided, $_title_updated;
+    check_editable($vars['refer'], true, true);
     
 	if (! isset($vars['msg']) ) return;
     
@@ -90,7 +91,10 @@ function plugin_memox_action()
                     // ターゲットのプラグイン部分
                     $opt = "$s_cols,$s_rows,$s_blabel";
                     $opt .= ",". MEMOX_DELIM_STR . ",$memo_body";
-                }else {
+
+                    if( strcmp($opt,$match[1]) == 0 ) return;
+                }
+                else {
                     $opt = $match[1];
                 }
                 $line .= "#memox($opt)" . $paddata[$i+1];
@@ -120,8 +124,7 @@ function plugin_memox_action()
 </form>
 EOD;
 	}
-	else
-	{
+	else {
 		page_write($vars['refer'], $postdata);
         
 		$title = $_title_updated;
