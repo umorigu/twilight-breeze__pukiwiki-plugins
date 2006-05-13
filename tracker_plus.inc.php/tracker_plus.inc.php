@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker_plus.inc.php,v 3.0 2006/04/03 23:39:56 jjyun Exp $
+// $Id: tracker_plus.inc.php,v 3.1 2006/05/13 22:05:12 jjyun Exp $
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
 // License: GPL v2 or (at your option) any later version
@@ -41,7 +41,7 @@ define('TRACKER_PLUS_LIST_DYNAMIC_FILTER_DEFAULT', TRUE);
 /////////////////////////////////////////////////////////////////////////////
 // 動的フィルタのリストラベルの拡張設定
 define('TRACKER_PLUS_LIST_APPLY_LISTFORMAT',TRUE);
-
+//
 //////////////////////////////////////////////////////////////////////////////
 // [Paging Configration Section] 
 // リスト表示時のページング機能の設定
@@ -55,7 +55,13 @@ define('TRACKER_PLUS_LIST_APPLY_LISTFORMAT',TRUE);
 define('TRACKER_PLUS_LIST_PAGING', 3);
 // 一度に表示する linkMark の数 
 define('TRACKER_PLUS_LIST_PAGING_MARK_NUMBER_PER_ONCE', 10);
-
+//
+/////////////////////////////////////////////////////////////////////////////
+// リスト作成時にページレイアウトを評価する範囲を
+// "//////////" の直前までに制限する.
+// ( パターンマッチングするレイアウト範囲の制御
+define('TRACKER_PLUS_LIST_APPLY_LIMIT_PARSERANGE',TRUE);
+//
 // *** Definition for codes, Don't modify...***
 define('TRACKER_PLUS_LIST_PAGING_ENABLE_LINKMARK', 1); 
 define('TRACKER_PLUS_LIST_PAGING_ENABLE_STRGMARK', 2); 
@@ -678,6 +684,59 @@ class Tracker_plus_list extends Tracker_list
         $this->cache['state']['total'] = count($this->rows);
         $this->put_cache_rows();
     }
+
+    // over-wride function.
+	function add($page,$name)
+	{
+		static $moved = array();
+
+		// 無限ループ防止
+		if (array_key_exists($name,$this->rows))
+		{
+			return;
+		}
+
+		$source = plugin_tracker_get_source($page);
+		if (preg_match('/move\sto\s(.+)/',$source[0],$matches))
+		{
+			$page = strip_bracket(trim($matches[1]));
+			if (array_key_exists($page,$moved) or !is_page($page))
+			{
+				return;
+			}
+			$moved[$page] = TRUE;
+			return $this->add($page,$name);
+		}
+		$source = join('',preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/','$1$2',$source));
+
+        // "/page"の内容が長すぎるとpreg_match()が失敗するバグ(?)があるので
+        // "//////////"までをマッチ対象とさせる
+        if( TRACKER_PLUS_LIST_APPLY_LIMIT_PARSERANGE )
+        {
+            $source_endpos = strpos($source, "//////////");
+            if( $source_endpos > 0 )
+            {
+                $source = substr($source, 0, $source_endpos);
+            }
+        }
+
+		// デフォルト値
+		$this->rows[$name] = array(
+			'_page'  => "[[$page]]",
+			'_refer' => $this->page,
+			'_real'  => $name,
+			'_update'=> get_filetime($page),
+			'_past'  => get_filetime($page)
+		);
+		if ($this->rows[$name]['_match'] = preg_match("/{$this->pattern}/s",$source,$matches))
+		{
+			array_shift($matches);
+			foreach ($this->pattern_fields as $key=>$field)
+			{
+				$this->rows[$name][$field] = trim($matches[$key]);
+			}
+		}
+	}
 
     // over-wride function.
     function replace_title($arr)
@@ -1717,7 +1776,7 @@ class Tracker_field_select2 extends Tracker_field_select
         }
         else 
         {
-          return $regmatch_value;
+            return $regmatch_value;
         }
     }
   
@@ -1728,17 +1787,6 @@ class Tracker_field_select2 extends Tracker_field_select
     {
         // 該当フィールドのBlockPluginを為す文字列から0番目の引数にあたる文字列を読み取る
         $arg= Tracker_plus_field_string_utility::get_argument_from_block_type_plugin_string($str);
-
-        // configページで設定された属性値と比較する
-        foreach( $this->config->get($this->name) as $option )
-        {
-            // '/'文字が選択候補文字列に入っても処理できるようにescapeする
-             $eoption=preg_quote($option[0],'/');
-            if( preg_match("/^$eoption$/",$arg) )
-            {
-              return $option[0];
-            }
-        }
         return $arg;
     }
   
@@ -1749,6 +1797,29 @@ class Tracker_field_select2 extends Tracker_field_select
         return $this->get_key($str);
     }
 }
+
+class Tracker_field_select3 extends Tracker_field_select2
+{
+    // (styleの適用時、list表示内容に、利用される)
+    // 引数(page内の該当部分)にconfigページの属性値一覧で定義した要素が含まれれば、
+    // その見出しの値を返す
+    function get_key($str)
+    {
+        // 該当フィールドのBlockPluginを為す文字列から0番目の引数にあたる文字列を読み取る
+        $arg = Tracker_plus_field_string_utility::get_argument_from_block_type_plugin_string($str);
+
+        // configページで設定された属性値と比較する
+        foreach( $this->config->get($this->name) as $option )
+        {
+            if( strcmp( $option[0], $arg) == 0 )
+                return $option[0];
+
+        }
+        return htmlspecialchars( $this->values[0] );
+    }
+
+}
+
 class Tracker_field_hidden2 extends Tracker_field_hidden
 {
     var $sort_type = SORT_REGULAR;
