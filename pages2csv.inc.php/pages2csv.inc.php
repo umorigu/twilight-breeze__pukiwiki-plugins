@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
 //
-// $Id: pages2csv.inc.php,v 1.4 2006/05/07 23:43:50 jjyun Exp $
+// $Id: pages2csv.inc.php,v 1.5 2006/07/21 21:31:27 jjyun Exp $
 // 
 /////////////////////////////////////////////////
 // 管理者だけが添付ファイルをアップロードできるようにする
@@ -456,6 +456,7 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
             {
                 continue;
             }
+
             if (preg_match('/^\|(.+)\|[hH]$/',$line) )
             {
                 // 表定義のパイプ区切りをCSV形式区切りに変更
@@ -465,7 +466,7 @@ class Pages2csv_Tracker_csvlist extends Tracker_plus_list
                 
                 $header .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_title'),$line);
             }
-            if (preg_match('/^\|(.+)\|[fF]$/',$line) )
+            else if (preg_match('/^\|(.+)\|[fF]$/',$line) )
             {
                 $line = preg_replace('/\|/',',', $line); 
                 $line = preg_replace('/\~/','', $line); 
