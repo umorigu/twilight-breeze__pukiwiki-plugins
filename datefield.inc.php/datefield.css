@@ -1,0 +1,68 @@
+@charaset "shift-jis";
+
+/* datefield.css v 0.7 (for datefield.inc.php, datefield.js)*/
+body.datefield
+{
+  background-image:none;
+  background-color:#ffffff; 
+}
+
+table.datefield
+{
+  background-color: #dddddd; 
+  border-color:     #dddddd; 
+  font-size:14px;
+  font-family:Arial;
+/*
+  If you use datefield-subwin version, below margin properties make effective.
+  If you use datefield-layer version, below margin properties make comment out.
+ */
+/* 
+  margin-left: auto;
+  margin-right: auto;
+*/
+}
+
+tr.datefield-month /* calendar title part */
+{
+   background-color: #ffb380; /* blue: #b3b3ff; orange: #ffe6b3 */
+   border-color:     #ffb380; /* blue: #b3b3ff; orange: #ffe6b3 */
+   white-space:nowrap; 
+}
+
+td.datefield-week /* calendar title (day title) */
+{
+   background-color: #ffe6b3;  /* blue:#b3ccff; oragne: #ffe6b3 */
+}
+
+th.datefield-month
+{
+   width: 14px;
+   font-size:14px;
+}
+
+td.datefield-now /* today's cell */
+{
+   width: 14px;
+   background-color: #ffffb3;
+}
+
+td.datefield-samemonth 
+{
+   width: 14px;
+   background-color: #eeeeee;
+}
+
+td.datefield-diffmonth 
+{
+   width: 14px;
+   background-color: #cccccc; 
+}
+
+td.datefield-footer
+{
+   font-size:13px;
+   white-space:nowrap;
+}
+
+/* *** */ 
