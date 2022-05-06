@@ -1,8 +1,10 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
 // $Id: tracker_plus.inc.php,v 3.1 2006/05/13 22:05:12 jjyun Exp $
+// tracker_plus.inc.php umorigu-patch-v1.0 by umorigu (2022-05-06)
 // Copyright (C) 
 //   2004-2006 written by jjyun ( http://www2.g-com.ne.jp/~jjyun/twilight-breeze/pukiwiki.php )
+//   2022 umorigu
 // License: GPL v2 or (at your option) any later version
 //
 // Issue from tracker.inc.php plugin (See Also bugtrack plugin)
@@ -319,7 +321,7 @@ function plugin_tracker_plus_action()
         if( array_key_exists($key,$_post) )
         {
             $value = is_a($fields[$key],"Tracker_field_hidden2") ?
-                $fields[$key]->format_value($_post[$key],$_post) :
+                $fields[$key]->format_value2($_post[$key],$_post) :
                 $fields[$key]->format_value($_post[$key]);
         }
 
@@ -331,7 +333,7 @@ function plugin_tracker_plus_action()
             }
             $postdata[$num] = str_replace(
                 "[$key]",
-                ($postdata[$num]{0} == '|' or $postdata[$num]{0} == ':') ?
+                ($postdata[$num][0] == '|' or $postdata[$num][0] == ':') ?
                     str_replace('|','&#x7c;',$value) : $value,
                 $postdata[$num]
             );
@@ -370,7 +372,7 @@ function plugin_tracker_plus_get_fields($base,$refer,&$config)
                  ) as $field=>$class)
     {
         $class = 'Tracker_field_'.$class;
-        $fields[$field] = &new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
+        $fields[$field] = new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
     }
 
     foreach( $config->get('fields') as $field)
@@ -383,7 +385,7 @@ function plugin_tracker_plus_get_fields($base,$refer,&$config)
             $field[2] = 'text';
             $field[3] = '20';
         }
-        $fields[$field[0]] = &new $class($field,$base,$refer,$config);
+        $fields[$field[0]] = new $class($field,$base,$refer,$config);
     }
     return $fields;
 }
@@ -493,7 +495,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
     }
 
     // Attension: Original code use $list as another use in this. (before this, $list contains list_name). by jjyun.
-    $list = &new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache,$orefer);
+    $list = new Tracker_plus_list($page,$refer,$config,$list_name,$filter_name,$cache,$orefer);
 
     $filter_selector = '';
     if( $list->filter_name != NULL || $list->dynamic_filter == TRUE )
@@ -506,7 +508,7 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
                 return "<p>config file '".htmlspecialchars($config->page.'/filters')."' not found</p>";
         }
 
-        $list_filter = &new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
+        $list_filter = new Tracker_plus_list_filter($filter_config, $list->filter_name, $list->dynamic_filter);
         
         $filter_selector = $list->get_selector($list_filter, $order, $limit);
         $list_filter->list_filter($list);
@@ -515,15 +517,15 @@ function plugin_tracker_plus_getlist($page, $refer, $config_name, $list_name, $o
 
     $list->sort($order);
     
-    return $filter_selector . $list->toString($limit, $pagingNo);
+    return $filter_selector . $list->toString2($limit, $pagingNo);
 }    
 
 class Tracker_plus_FilterConfig extends Config
 {
 
-    function Tracker_plus_FilterConfig($name)
+    function __construct($name)
     {
-        parent::Config($name);
+        parent::__construct($name);
     }
 
     function get_keys()
@@ -539,11 +541,11 @@ class Tracker_plus_FilterConfig extends Config
   
         foreach( $obj->before as $before_line )
         {
-            if ( strlen($before_line) > 0 && $before_line{0} == '|' && preg_match('/^\|(.+)\|([hH]?)\s*$/', $before_line, $matches) )
+            if ( strlen($before_line) > 0 && $before_line[0] == '|' && preg_match('/^\|(.+)\|([hH]?)\s*$/', $before_line, $matches) )
             {
                 // Table row
                 if (! is_a($before_obj, 'ConfigTable_Sequential') )
-                    $before_obj = & new ConfigTable_Sequential('', $before_obj);
+                    $before_obj = new ConfigTable_Sequential('', $before_obj);
                 // Trim() each table cell
                 $before_obj->add_value(array_map('trim', explode('|', $matches[1])));
             }
@@ -564,11 +566,11 @@ class Tracker_plus_FilterConfig extends Config
             if( $after_line == '' )
                 continue;
             
-            if( $after_line{0} == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
+            if( $after_line[0] == '|' && preg_match('/^\|(.+)\|([fF]?)\s*$/', $after_line, $matches) )
             {
                 // Table row
                 if( ! is_a($after_obj, 'ConfigTable_Sequential') )
-                    $after_obj = & new ConfigTable_Sequential('', $after_obj);
+                    $after_obj = new ConfigTable_Sequential('', $after_obj);
                 // Trim() each table cell
                 $after_obj->add_value(array_map('trim', explode('|', $matches[1])));
             }
@@ -603,7 +605,7 @@ class Tracker_plus_list extends Tracker_list
                'verbs' => FALSE,
                );
 
-    function Tracker_plus_list($page,$refer,&$config,$list,$filter_name,$cache,$orefer = NULL)
+    function __construct($page,$refer,&$config,$list,$filter_name,$cache,$orefer = NULL)
     {
         $this->page = $page;
         $this->config = &$config;
@@ -728,7 +730,9 @@ class Tracker_plus_list extends Tracker_list
 			'_update'=> get_filetime($page),
 			'_past'  => get_filetime($page)
 		);
-		if ($this->rows[$name]['_match'] = preg_match("/{$this->pattern}/s",$source,$matches))
+		$preg_u = get_preg_u();
+		if ($this->rows[$name]['_match'] = preg_match("/{$this->pattern}/s" . $preg_u,
+			$source,$matches))
 		{
 			array_shift($matches);
 			foreach ($this->pattern_fields as $key=>$field)
@@ -959,7 +963,7 @@ EOD;
     }
 
     // over-wride function.
-    function toString($limit=NULL,$pagingNo=0)
+    function toString2($limit=NULL,$pagingNo=0)
     {
         global $_tracker_messages;
         global $_tracker_plus_list_msg;
@@ -1038,7 +1042,7 @@ EOD;
                     $source .= $line;
                     continue;
                 }
-                $this->pipe = ($line{0} == '|' or $line{0} == ':');
+                $this->pipe = ($line[0] == '|' or $line[0] == ':');
 
                 $source .= preg_replace_callback('/\[([^\[\]]+)\]/',array(&$this,'replace_item'),$line);
             }
@@ -1446,7 +1450,7 @@ class Tracker_plus_list_filter
     // setting in filter(), and use judge().
     var $field_config = Null;
   
-    function Tracker_plus_list_filter($filter_config, $name = NULL, $filter_select = FALSE)
+    function __construct($filter_config, $name = NULL, $filter_select = FALSE)
     {
         $this->name = $name;
         $this->filter_config = $filter_config;  
@@ -1595,7 +1599,7 @@ class Tracker_plus_list_filterCondition
     var $condExpress;
     var $isConjunction;
   
-    function Tracker_plus_list_filterCondition( $keyValues, $name )
+    function __construct( $keyValues, $name )
     {
         global $_tracker_plus_list_msg;
 
@@ -1762,7 +1766,7 @@ class Tracker_field_select2 extends Tracker_field_select
         static $options = array();
         if( ! array_key_exists($this->name,$options))
         { 
-            $options[$this->name] = array_flip( array_map(create_function('$arr','return $arr[0];'),
+            $options[$this->name] = array_flip( array_map(function($arr){return $arr[0];},
                                       $this->config->get($this->name) ) );
         }
 
@@ -1883,7 +1887,7 @@ class Tracker_field_hidden2 extends Tracker_field_hidden
         return $this->extract_value($str);
     }
     // Pageへ転記する際の値を返す
-    function format_value($value,$post)
+    function format_value2($value,$post)
     {
         $str=$value;
         
@@ -2069,14 +2073,14 @@ EOD;
 
 class Tracker_plus_field_string_utility {
   
-    function get_argument_from_block_type_plugin_string($str, $extract_arg_num = 0, $plugin_name = '.*' )
+    static function get_argument_from_block_type_plugin_string($str, $extract_arg_num = 0, $plugin_name = '.*' )
     {
         return Tracker_plus_field_string_utility::get_argument_from_plugin_string($str,$extract_arg_num,$plugin_name,'block');
     }
   
     // plugin_type : block type = 0, inline type = 1.
     // extract_arg_num : first argument number is 0.  
-    function get_argument_from_plugin_string($str, $extract_arg_num, $plugin_name, $plugin_type = 'block')
+    static function get_argument_from_plugin_string($str, $extract_arg_num, $plugin_name, $plugin_type = 'block')
     {
         $str_plugin = ($plugin_type == 'inline') ? '\&' : '\#' ;
         $str_plugin .= $plugin_name;
@@ -2115,4 +2119,3 @@ class Tracker_plus_field_string_utility {
         return $str;
     }
 }
-?>
